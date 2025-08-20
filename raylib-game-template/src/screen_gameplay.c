@@ -32,6 +32,15 @@
 static int framesCounter = 0;
 static int finishScreen = 0;
 
+//player position
+typedef struct Vector2Int
+{
+    int x;
+    int y;
+} Vector2Int;
+Vector2Int position = {0, 0};
+
+int moveSpeed = 5;
 //----------------------------------------------------------------------------------
 // Gameplay Screen Functions Definition
 //----------------------------------------------------------------------------------
@@ -42,6 +51,9 @@ void InitGameplayScreen(void)
     // TODO: Initialize GAMEPLAY screen variables here!
     framesCounter = 0;
     finishScreen = 0;
+
+    position.x = GetScreenWidth() / 2;
+    position.y = GetScreenHeight() / 2;
 }
 
 // Gameplay Screen Update logic
@@ -55,6 +67,25 @@ void UpdateGameplayScreen(void)
         finishScreen = 1;
         PlaySound(fxCoin);
     }
+
+    //take user input for player positions
+    if (IsKeyDown(KEY_RIGHT))
+    {
+        position.x += moveSpeed;
+    }
+    if (IsKeyDown(KEY_LEFT))
+    {
+        position.x -= moveSpeed;
+    }
+    if (IsKeyDown(KEY_UP))
+    {
+        position.y -= moveSpeed;
+    }
+    if (IsKeyDown(KEY_DOWN))
+    {
+        position.y += moveSpeed;
+    }
+
 }
 
 // Gameplay Screen Draw logic
@@ -65,6 +96,8 @@ void DrawGameplayScreen(void)
     Vector2 pos = { 20, 10 };
     DrawTextEx(font, "GAMEPLAY SCREEN", pos, font.baseSize*3.0f, 4, MAROON);
     DrawText("PRESS ENTER or TAP to JUMP to ENDING SCREEN", 130, 220, 20, MAROON);
+
+    DrawRectangle(position.x, position.y, 20, 20, RED);
 }
 
 // Gameplay Screen Unload logic
