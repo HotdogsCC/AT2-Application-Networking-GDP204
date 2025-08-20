@@ -51,7 +51,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{6B1A933E-71B8-4C1F-9E79-02D98830E671}</ProjectGuid>
+    <ProjectGuid>{8FAAC937-7F3F-4256-AEA2-CED1E9F5EB03}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>shaders_normalmap</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
