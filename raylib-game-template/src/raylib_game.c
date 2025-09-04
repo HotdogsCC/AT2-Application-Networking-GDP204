@@ -12,8 +12,13 @@
 *
 ********************************************************************************************/
 
+//is this going to be a server or client instance?
+#define IS_SERVER
+
+
 #include "raylib.h"
 #include "screens.h"    // NOTE: Declares global (extern) variables and screens functions
+#include "server.h"
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
@@ -84,10 +89,22 @@ int main(void)
     SetTargetFPS(60);       // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
+#ifdef IS_SERVER
+    StartServer();
+#else // we're a client if we are not a server
+
+#endif // IS_SERVER
+
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         UpdateDrawFrame();
+
+#ifdef IS_SERVER
+        UpdateServer();
+#else // we're a client if we are not a server
+
+#endif // IS_SERVER
     }
 #endif
 
