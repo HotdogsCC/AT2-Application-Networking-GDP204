@@ -14,17 +14,13 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //is this going to be a server or client instance?
-//#define IS_SERVER
+#define IS_SERVER
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "raylib.h"
 #include "screens.h"    // NOTE: Declares global (extern) variables and screens functions
 
-#ifdef IS_SERVER
-#include "server.h"
-#else
-#include "client.h"
-#endif //IS_SERVER
+#include "networking.h"
 
 
 

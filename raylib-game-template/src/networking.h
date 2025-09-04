@@ -2,10 +2,11 @@
 extern "C" {
 #endif
 
-	int StartMyNetworkedSession();
+	void StartServer();
+	void StartClient();
 
-	void Printf(const char* fmt, ...);
-	void FatalError(const char* fmt, ...);
+	void UpdateServer();
+	void UpdateClient();
 
 #ifdef __cplusplus
 }

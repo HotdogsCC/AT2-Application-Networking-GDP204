@@ -362,13 +362,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\src\client.h" />
     <ClInclude Include="..\..\..\src\networking.h" />
     <ClInclude Include="..\..\..\src\screens.h" />
-    <ClInclude Include="..\..\..\src\server.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\client.cpp" />
     <ClCompile Include="..\..\..\src\networking.cpp" />
     <ClCompile Include="..\..\..\src\raylib_game.c" />
     <ClCompile Include="..\..\..\src\screen_logo.c" />
@@ -376,16 +373,6 @@
     <ClCompile Include="..\..\..\src\screen_options.c" />
     <ClCompile Include="..\..\..\src\screen_gameplay.c" />
     <ClCompile Include="..\..\..\src\screen_ending.c" />
-    <ClCompile Include="..\..\..\src\server.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release.DLL|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug.DLL|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release.DLL|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug.DLL|x64'">false</ExcludedFromBuild>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\..\src\raylib_game.rc" />
