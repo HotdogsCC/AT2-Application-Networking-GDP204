@@ -39,7 +39,19 @@
 
 bool g_bQuit = false;
 
+class NetworkClient;
+class NetworkServer;
+
+NetworkClient* myClient = nullptr;
+NetworkServer* myServer = nullptr;
+
 SteamNetworkingMicroseconds g_logTimeZero;
+
+ISteamNetworkingSockets* m_pInterface;
+HSteamNetPollGroup m_hPollGroup;
+std::vector< HSteamNetConnection> m_Clients;
+HSteamNetConnection m_hConnection;
+HSteamListenSocket m_hListenSock;
 
 // We do this because I won't want to figure out how to cleanly shut
 // down the thread that is reading from stdin.
@@ -140,6 +152,9 @@ public:
 			FatalError("Failed to listen on port %d", nPort);
 		Printf("Server listening on port %d\n", nPort);
 
+#define OFF
+#ifndef OFF
+
 		// Poll for and handle messages
 		while (!g_bQuit)
 		{
@@ -147,28 +162,7 @@ public:
 
 			while (!g_bQuit)
 			{
-				ISteamNetworkingMessage* pIncomingMsg = nullptr;
-				int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
-				if (numMsgs == 0)
-					break;
-				if (numMsgs < 0)
-					FatalError("Error checking for messages");
-				assert(numMsgs == 1 && pIncomingMsg);
-				auto itClient = std::find(m_Clients.begin(), m_Clients.end(), pIncomingMsg->m_conn);
-				assert(itClient != m_Clients.end());
-
-				// '\0'-terminate it to make it easier to parse
-				// Assume it's a c-string and print it as-is
-				std::string sCmd;
-
-				// Populate a std::string with the data we received, assuming it's a character array
-				sCmd.assign((const char*)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
-
-				// We don't need this anymore.
-				pIncomingMsg->Release();
-
-				const char* cmd = sCmd.c_str();
-				Printf(cmd);
+				UpdateServer();
 			}
 
 			//
@@ -201,15 +195,13 @@ public:
 
 		m_pInterface->DestroyPollGroup(m_hPollGroup);
 		m_hPollGroup = k_HSteamNetPollGroup_Invalid;
+
+#endif
 	}
 private:
 
 	static NetworkServer* s_pCallbackInstance;
-	HSteamListenSocket m_hListenSock;
-	HSteamNetPollGroup m_hPollGroup;
-	ISteamNetworkingSockets* m_pInterface;
 
-	std::vector< HSteamNetConnection> m_Clients;
 
 	static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
@@ -361,7 +353,8 @@ public:
 		m_hConnection = m_pInterface->ConnectByIPAddress(serverAddr, 1, &opt);
 		if (m_hConnection == k_HSteamNetConnection_Invalid)
 			FatalError("Failed to create connection");
-
+#define OLD
+#ifndef OLD
 		while (!g_bQuit)
 		{
 			//
@@ -369,22 +362,7 @@ public:
 			//
 			while (!g_bQuit)
 			{
-				ISteamNetworkingMessage* pIncomingMsg = nullptr;
-				int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
-				// Nothing? Do nothing.
-				if (numMsgs == 0)
-					break;
-				else if (numMsgs < 0)
-					FatalError("Error checking for messages");
-				else
-				{
-					// Just echo anything we get from the server
-					fwrite(pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout);
-					fputc('\n', stdout);
-
-					// We don't need this anymore.
-					pIncomingMsg->Release();
-				}
+				UpdateClient();
 			}
 
 			//
@@ -412,12 +390,13 @@ public:
 		// to be flushed out.  But remember this is an application
 		// protocol on UDP.  See ShutdownSteamDatagramConnectionSockets
 		m_pInterface->CloseConnection(m_hConnection, 0, "Goodbye", true);
+#endif
 	}
 private:
 
 	static NetworkClient* s_pCallbackInstance;
-	HSteamNetConnection m_hConnection;
-	ISteamNetworkingSockets* m_pInterface;
+
+	//ISteamNetworkingSockets* m_pInterface;
 
 	static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
@@ -587,14 +566,17 @@ int startSessionFromArgument(int argc, const char* argv[])
 
 	if (bClient)
 	{
-		NetworkClient client;
-		client.Run(addrServer);
+		myClient = new NetworkClient;
+		myClient->Run(addrServer);
 	}
 	else
 	{
-		NetworkServer server;
-		server.Run((uint16)nPort);
+		myServer = new NetworkServer;
+		myServer->Run((uint16)nPort);
 	}
+
+#define OFF
+#ifndef OFF
 
 	//
 	// Shutdown
@@ -617,7 +599,7 @@ int startSessionFromArgument(int argc, const char* argv[])
 	// Just nuke the process
 	//LocalUserInput_Kill();
 	NukeProcess(0);
-
+#endif
 	return 0;
 }
 
@@ -655,10 +637,124 @@ void StartClient()
 
 void UpdateServer()
 {
-	return;
+	ISteamNetworkingMessage* pIncomingMsg = nullptr;
+	int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
+	if (numMsgs == 0)
+		return;
+	if (numMsgs < 0)
+		FatalError("Error checking for messages");
+	assert(numMsgs == 1 && pIncomingMsg);
+	auto itClient = std::find(m_Clients.begin(), m_Clients.end(), pIncomingMsg->m_conn);
+	assert(itClient != m_Clients.end());
+
+	// '\0'-terminate it to make it easier to parse
+	// Assume it's a c-string and print it as-is
+	std::string sCmd;
+
+	// Populate a std::string with the data we received, assuming it's a character array
+	sCmd.assign((const char*)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
+
+	// We don't need this anymore.
+	pIncomingMsg->Release();
+
+	const char* cmd = sCmd.c_str();
+	Printf(cmd);
 }
 
 void UpdateClient()
 {
-	return;
+	ISteamNetworkingMessage* pIncomingMsg = nullptr;
+	int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
+	// Nothing? Do nothing.
+	if (numMsgs == 0)
+		return;
+	else if (numMsgs < 0)
+		FatalError("Error checking for messages");
+	else
+	{
+		// Just echo anything we get from the server
+		fwrite(pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout);
+		fputc('\n', stdout);
+
+		// We don't need this anymore.
+		pIncomingMsg->Release();
+	}
+}
+
+void CloseServer()
+{
+	// Close all the connections
+	Printf("Closing connections...\n");
+	for (auto it : m_Clients)
+	{
+		// Send them one more goodbye message.  Note that we also have the
+		// connection close reason as a place to send final data.  However,
+		// that's usually best left for more diagnostic/debug text not actual
+		// protocol strings.
+		//SendStringToClient(it, "Server is shutting down.  Goodbye.");
+
+		// Close the connection.  We use "linger mode" to ask SteamNetworkingSockets
+		// to flush this out and close gracefully.
+		m_pInterface->CloseConnection(it, 0, "Server Shutdown", true);
+	}
+	m_Clients.clear();
+
+	m_pInterface->CloseListenSocket(m_hListenSock);
+	m_hListenSock = k_HSteamListenSocket_Invalid;
+
+	m_pInterface->DestroyPollGroup(m_hPollGroup);
+	m_hPollGroup = k_HSteamNetPollGroup_Invalid;
+
+	//
+	// Shutdown
+	//
+
+	// Give connections time to finish up.  This is an application layer protocol
+	// here, it's not TCP.  Note that if you have an application and you need to be
+	// more sure about cleanup, you won't be able to do this.  You will need to send
+	// a message and then either wait for the peer to close the connection, or
+	// you can pool the connection to see if any reliable data is pending.
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+#ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
+	GameNetworkingSockets_Kill();
+#else
+	SteamDatagramClient_Kill();
+#endif
+
+	// Ug, why is there no simple solution for portable, non-blocking console user input?
+	// Just nuke the process
+	//LocalUserInput_Kill();
+	NukeProcess(0);
+}
+
+void CloseClient()
+{
+	// Close the connection gracefully.
+	// We use linger mode to ask for any remaining reliable data
+	// to be flushed out.  But remember this is an application
+	// protocol on UDP.  See ShutdownSteamDatagramConnectionSockets
+	m_pInterface->CloseConnection(m_hConnection, 0, "Goodbye", true);
+
+	//
+// Shutdown
+//
+
+// Give connections time to finish up.  This is an application layer protocol
+// here, it's not TCP.  Note that if you have an application and you need to be
+// more sure about cleanup, you won't be able to do this.  You will need to send
+// a message and then either wait for the peer to close the connection, or
+// you can pool the connection to see if any reliable data is pending.
+	std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+#ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
+	GameNetworkingSockets_Kill();
+#else
+	SteamDatagramClient_Kill();
+#endif
+
+	// Ug, why is there no simple solution for portable, non-blocking console user input?
+	// Just nuke the process
+	//LocalUserInput_Kill();
+	NukeProcess(0);
 }

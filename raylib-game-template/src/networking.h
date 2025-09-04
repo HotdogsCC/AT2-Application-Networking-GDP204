@@ -8,6 +8,9 @@ extern "C" {
 	void UpdateServer();
 	void UpdateClient();
 
+	void CloseServer();
+	void CloseClient();
+
 #ifdef __cplusplus
 }
 #endif

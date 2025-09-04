@@ -115,6 +115,14 @@ int main(void)
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unload current screen data before closing
+
+#ifdef IS_SERVER
+    CloseServer();
+#else // we're a client if we are not a server
+    CloseClient();
+#endif // IS_SERVER
+
+
     switch (currentScreen)
     {
         case LOGO: UnloadLogoScreen(); break;
