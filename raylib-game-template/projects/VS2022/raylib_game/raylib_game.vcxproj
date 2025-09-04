@@ -362,11 +362,13 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\src\client.h" />
     <ClInclude Include="..\..\..\src\networking.h" />
     <ClInclude Include="..\..\..\src\screens.h" />
     <ClInclude Include="..\..\..\src\server.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\src\client.cpp" />
     <ClCompile Include="..\..\..\src\networking.cpp" />
     <ClCompile Include="..\..\..\src\raylib_game.c" />
     <ClCompile Include="..\..\..\src\screen_logo.c" />
