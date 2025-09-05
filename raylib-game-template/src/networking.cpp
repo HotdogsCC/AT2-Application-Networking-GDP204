@@ -53,6 +53,8 @@ std::vector< HSteamNetConnection> m_Clients;
 HSteamNetConnection m_hConnection;
 HSteamListenSocket m_hListenSock;
 
+NetworkServer* s_pCallbackInstance;
+
 // We do this because I won't want to figure out how to cleanly shut
 // down the thread that is reading from stdin.
 static void NukeProcess(int rc)
@@ -200,8 +202,6 @@ public:
 	}
 private:
 
-	static NetworkServer* s_pCallbackInstance;
-
 
 	static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
@@ -328,7 +328,7 @@ private:
 	}
 };
 
-NetworkServer* NetworkServer::s_pCallbackInstance = nullptr;
+//NetworkServer* NetworkServer::s_pCallbackInstance = nullptr;
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -637,48 +637,82 @@ void StartClient()
 
 void UpdateServer()
 {
-	ISteamNetworkingMessage* pIncomingMsg = nullptr;
-	int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
-	if (numMsgs == 0)
-		return;
-	if (numMsgs < 0)
-		FatalError("Error checking for messages");
-	assert(numMsgs == 1 && pIncomingMsg);
-	auto itClient = std::find(m_Clients.begin(), m_Clients.end(), pIncomingMsg->m_conn);
-	assert(itClient != m_Clients.end());
+	while (!g_bQuit)
+	{
+		ISteamNetworkingMessage* pIncomingMsg = nullptr;
+		int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
+		if (numMsgs == 0)
+			break;
+		if (numMsgs < 0)
+			FatalError("Error checking for messages");
+		assert(numMsgs == 1 && pIncomingMsg);
+		auto itClient = std::find(m_Clients.begin(), m_Clients.end(), pIncomingMsg->m_conn);
+		assert(itClient != m_Clients.end());
 
-	// '\0'-terminate it to make it easier to parse
-	// Assume it's a c-string and print it as-is
-	std::string sCmd;
+		// '\0'-terminate it to make it easier to parse
+		// Assume it's a c-string and print it as-is
+		std::string sCmd;
 
-	// Populate a std::string with the data we received, assuming it's a character array
-	sCmd.assign((const char*)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
+		// Populate a std::string with the data we received, assuming it's a character array
+		sCmd.assign((const char*)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
 
-	// We don't need this anymore.
-	pIncomingMsg->Release();
+		// We don't need this anymore.
+		pIncomingMsg->Release();
 
-	const char* cmd = sCmd.c_str();
-	Printf(cmd);
+		const char* cmd = sCmd.c_str();
+		Printf(cmd);
+	}
+
+	//
+	// Poll Callbacks
+	//
+	//s_pCallbackInstance = this;
+	m_pInterface->RunCallbacks();
+
+	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void UpdateClient()
 {
-	ISteamNetworkingMessage* pIncomingMsg = nullptr;
-	int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
-	// Nothing? Do nothing.
-	if (numMsgs == 0)
-		return;
-	else if (numMsgs < 0)
-		FatalError("Error checking for messages");
-	else
+	//
+			// RECEIVE
+			//
+	while (!g_bQuit)
 	{
-		// Just echo anything we get from the server
-		fwrite(pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout);
-		fputc('\n', stdout);
+		ISteamNetworkingMessage* pIncomingMsg = nullptr;
+		int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
+		// Nothing? Do nothing.
+		if (numMsgs == 0)
+			break;
+		else if (numMsgs < 0)
+			FatalError("Error checking for messages");
+		else
+		{
+			// Just echo anything we get from the server
+			fwrite(pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout);
+			fputc('\n', stdout);
 
-		// We don't need this anymore.
-		pIncomingMsg->Release();
+			// We don't need this anymore.
+			pIncomingMsg->Release();
+		}
 	}
+
+	//
+	// Poll Callbacks
+	//
+
+	//s_pCallbackInstance = this;
+	m_pInterface->RunCallbacks();
+
+	//
+	// SEND
+	//
+
+	std::string DebugMessage = "Client message";
+
+	// Send it to the server and let them parse it
+	m_pInterface->SendMessageToConnection(m_hConnection, DebugMessage.c_str(), (uint32)DebugMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
+	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void CloseServer()
