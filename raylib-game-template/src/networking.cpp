@@ -53,10 +53,7 @@ std::vector< HSteamNetConnection> m_Clients;
 HSteamNetConnection m_hConnection;
 HSteamListenSocket m_hListenSock;
 
-NetworkServer* s_pCallbackInstance;
-
-// We do this because I won't want to figure out how to cleanly shut
-// down the thread that is reading from stdin.
+// kills the session
 static void NukeProcess(int rc)
 {
 #ifdef _WIN32
@@ -67,6 +64,8 @@ static void NukeProcess(int rc)
 #endif
 }
 
+//outputs information to the console
+//kills the session if the type is a bug
 static void DebugOutput(ESteamNetworkingSocketsDebugOutputType eType, const char* pszMsg)
 {
 	SteamNetworkingMicroseconds time = SteamNetworkingUtils()->GetLocalTimestamp() - g_logTimeZero;
@@ -80,6 +79,7 @@ static void DebugOutput(ESteamNetworkingSocketsDebugOutputType eType, const char
 	}
 }
 
+//debugs an error and kills the session
 static void FatalError(const char* fmt, ...)
 {
 	char text[2048];
@@ -93,6 +93,7 @@ static void FatalError(const char* fmt, ...)
 	DebugOutput(k_ESteamNetworkingSocketsDebugOutputType_Bug, text);
 }
 
+//prints a string to the console
 static void Printf(const char* fmt, ...)
 {
 	char text[2048];
@@ -105,11 +106,6 @@ static void Printf(const char* fmt, ...)
 		*nl = '\0';
 	DebugOutput(k_ESteamNetworkingSocketsDebugOutputType_Msg, text);
 }
-
-// You really gotta wonder what kind of pedantic garbage was
-// going through the minds of people who designed std::string
-// that they decided not to include trim.
-// https://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
 
 // trim from start (in place)
 static inline void ltrim(std::string& s) {
@@ -154,58 +150,11 @@ public:
 			FatalError("Failed to listen on port %d", nPort);
 		Printf("Server listening on port %d\n", nPort);
 
-#define OFF
-#ifndef OFF
-
-		// Poll for and handle messages
-		while (!g_bQuit)
-		{
-			char temp[1024];
-
-			while (!g_bQuit)
-			{
-				UpdateServer();
-			}
-
-			//
-			// Poll Callbacks
-			//
-			s_pCallbackInstance = this;
-			m_pInterface->RunCallbacks();
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		}
-
-		// Close all the connections
-		Printf("Closing connections...\n");
-		for (auto it : m_Clients)
-		{
-			// Send them one more goodbye message.  Note that we also have the
-			// connection close reason as a place to send final data.  However,
-			// that's usually best left for more diagnostic/debug text not actual
-			// protocol strings.
-			SendStringToClient(it, "Server is shutting down.  Goodbye.");
-
-			// Close the connection.  We use "linger mode" to ask SteamNetworkingSockets
-			// to flush this out and close gracefully.
-			m_pInterface->CloseConnection(it, 0, "Server Shutdown", true);
-		}
-		m_Clients.clear();
-
-		m_pInterface->CloseListenSocket(m_hListenSock);
-		m_hListenSock = k_HSteamListenSocket_Invalid;
-
-		m_pInterface->DestroyPollGroup(m_hPollGroup);
-		m_hPollGroup = k_HSteamNetPollGroup_Invalid;
-
-#endif
 	}
 private:
-
-
 	static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
-		s_pCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
+		//s_pCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
 	}
 
 	void SendStringToClient(HSteamNetConnection conn, const char* str)
@@ -328,8 +277,6 @@ private:
 	}
 };
 
-//NetworkServer* NetworkServer::s_pCallbackInstance = nullptr;
-
 /////////////////////////////////////////////////////////////////////////////
 //
 // NetworkClient
@@ -353,54 +300,11 @@ public:
 		m_hConnection = m_pInterface->ConnectByIPAddress(serverAddr, 1, &opt);
 		if (m_hConnection == k_HSteamNetConnection_Invalid)
 			FatalError("Failed to create connection");
-#define OLD
-#ifndef OLD
-		while (!g_bQuit)
-		{
-			//
-			// RECEIVE
-			//
-			while (!g_bQuit)
-			{
-				UpdateClient();
-			}
-
-			//
-			// Poll Callbacks
-			//
-
-			s_pCallbackInstance = this;
-			m_pInterface->RunCallbacks();
-
-			//
-			// SEND
-			//
-
-			std::string DebugMessage = "Client message";
-
-			// Send it to the server and let them parse it
-			m_pInterface->SendMessageToConnection(m_hConnection, DebugMessage.c_str(), (uint32)DebugMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		}
-
-		g_bQuit = true;
-
-		// Close the connection gracefully.
-		// We use linger mode to ask for any remaining reliable data
-		// to be flushed out.  But remember this is an application
-		// protocol on UDP.  See ShutdownSteamDatagramConnectionSockets
-		m_pInterface->CloseConnection(m_hConnection, 0, "Goodbye", true);
-#endif
 	}
 private:
-
-	static NetworkClient* s_pCallbackInstance;
-
-	//ISteamNetworkingSockets* m_pInterface;
-
 	static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
-		s_pCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
+		//s_pCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
 	}
 
 	void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)
@@ -462,8 +366,6 @@ private:
 		}
 	}
 };
-
-NetworkClient* NetworkClient::s_pCallbackInstance = nullptr;
 
 const uint16 DEFAULT_SERVER_PORT = 27020;
 
@@ -575,31 +477,6 @@ int startSessionFromArgument(int argc, const char* argv[])
 		myServer->Run((uint16)nPort);
 	}
 
-#define OFF
-#ifndef OFF
-
-	//
-	// Shutdown
-	//
-
-	// Give connections time to finish up.  This is an application layer protocol
-	// here, it's not TCP.  Note that if you have an application and you need to be
-	// more sure about cleanup, you won't be able to do this.  You will need to send
-	// a message and then either wait for the peer to close the connection, or
-	// you can pool the connection to see if any reliable data is pending.
-	std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-#ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
-	GameNetworkingSockets_Kill();
-#else
-	SteamDatagramClient_Kill();
-#endif
-
-	// Ug, why is there no simple solution for portable, non-blocking console user input?
-	// Just nuke the process
-	//LocalUserInput_Kill();
-	NukeProcess(0);
-#endif
 	return 0;
 }
 
@@ -669,15 +546,11 @@ void UpdateServer()
 	//s_pCallbackInstance = this;
 	m_pInterface->RunCallbacks();
 
-	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void UpdateClient()
 {
-	//
-			// RECEIVE
-			//
-	while (!g_bQuit)
+	while (true)
 	{
 		ISteamNetworkingMessage* pIncomingMsg = nullptr;
 		int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
@@ -697,22 +570,13 @@ void UpdateClient()
 		}
 	}
 
-	//
-	// Poll Callbacks
-	//
-
-	//s_pCallbackInstance = this;
 	m_pInterface->RunCallbacks();
-
-	//
-	// SEND
-	//
 
 	std::string DebugMessage = "Client message";
 
 	// Send it to the server and let them parse it
-	m_pInterface->SendMessageToConnection(m_hConnection, DebugMessage.c_str(), (uint32)DebugMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
-	//std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	m_pInterface->SendMessageToConnection(m_hConnection, DebugMessage.c_str(),
+		(uint32)DebugMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
 }
 
 void CloseServer()
@@ -749,6 +613,7 @@ void CloseServer()
 	// a message and then either wait for the peer to close the connection, or
 	// you can pool the connection to see if any reliable data is pending.
 	std::this_thread::sleep_for(std::chrono::milliseconds(500));
+	delete myServer;
 
 #ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
 	GameNetworkingSockets_Kill();
@@ -780,6 +645,8 @@ void CloseClient()
 // a message and then either wait for the peer to close the connection, or
 // you can pool the connection to see if any reliable data is pending.
 	std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+	delete myClient;
 
 #ifdef STEAMNETWORKINGSOCKETS_OPENSOURCE
 	GameNetworkingSockets_Kill();
