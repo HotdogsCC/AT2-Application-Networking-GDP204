@@ -362,6 +362,7 @@ private:
 			std::string clientIDPacket = "ID";
 			char clientID = (char)(m_Clients.size() + 1);
 			clientIDPacket.append(&clientID);
+			//clientIDPacket.append('\0');
 			SendStringToClient(pInfo->m_hConn, clientIDPacket.c_str());
 
 			// Add them to the client list, using std::map wacky syntax
@@ -653,6 +654,25 @@ void UpdateServer()
 	//
 	// Poll Callbacks
 	//
+
+	//send data to clients
+	for (auto client : m_Clients)
+	{
+		//in clientPos, first means its ID and second means its position
+		for (auto& clientPos : clientPositions)
+		{
+			DataPacket curClientPacket;
+			curClientPacket.id = clientPos.first;
+			curClientPacket.posX = clientPos.second.x;
+			curClientPacket.posY = clientPos.second.y;
+
+			char serializedPacket[NETWORK_PACKET_SIZE];
+			SerializeDataPacket(curClientPacket, serializedPacket);
+
+			myServer->SendStringToClient(client, serializedPacket);
+		}
+		
+	}
 	
 #define off
 #ifndef off
@@ -720,10 +740,24 @@ void UpdateClient()
 		{
 			//is this an id packet?
 			char* message = (char*)pIncomingMsg->m_pData;
+			if (message == nullptr)
+			{
+				break;
+			}
 			if(message[0] == 'I' || message[1] == 'D')
 			{
 				//set the ID
 				myID = message[2];
+			}
+			else
+			{
+				//DataPacket incomingPacket = DeserializeDataPacket(message);
+
+				//if this data relates to us, ignore it
+				//if (incomingPacket.id != myID)
+				{
+					//clientPositions[incomingPacket.id] = { incomingPacket.posX, incomingPacket.posY };
+				}
 			}
 
 			//is this a position packet?
