@@ -600,6 +600,8 @@ void UpdateServer()
 	// Poll Callbacks
 	//
 	
+#define off
+#ifndef off
 
 	//perpare position data
 	std::string positionDataPacket = "P"; //P means positional data,
@@ -644,7 +646,7 @@ void UpdateServer()
 	{
 		myServer->SendStringToClient(client, positionDataPacket.c_str());
 	}
-
+#endif
 	m_pInterface->RunCallbacks();
 
 }

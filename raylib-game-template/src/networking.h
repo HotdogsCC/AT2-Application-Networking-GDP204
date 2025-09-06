@@ -3,6 +3,13 @@ typedef struct Vector2Int
 	int x;
 	int y;
 } Vector2Int;
+typedef struct DataPacket
+{
+	char id;
+	char posX[4];
+	char posY[4];
+} DataPacket;
+
 
 #ifdef __cplusplus
 extern "C" {

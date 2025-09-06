@@ -98,12 +98,9 @@ void DrawGameplayScreen(void)
     //draw this player
     DrawRectangle(position.x, position.y, 20, 20, RED);
 
-    //draw others
-    for (int i = 1; i <= GetClientCount(); i++)
+    if (GetNetworkStatus() == SERVER_ACTIVE)
     {
-        Vector2Int clientPos = GetClientPosition(i);
-
-        DrawRectangle(clientPos.x, clientPos.y, 20, 20, GREEN);
+        DrawRectangle(GetClientPosition(1).x, GetClientPosition(1).y, 20, 20, GREEN);
     }
 }
 
