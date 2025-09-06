@@ -54,6 +54,8 @@ HSteamNetConnection m_hConnection;
 HSteamListenSocket m_hListenSock;
 
 NetworkStatus networkStatus = INACTIVE;
+NetworkServer* s_pCallbackInstance;
+NetworkClient* s_pClientCallbackInstance;
 
 // kills the session
 static void NukeProcess(int rc)
@@ -158,7 +160,7 @@ public:
 private:
 	static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
-		//s_pCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
+		s_pCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
 	}
 
 	void SendStringToClient(HSteamNetConnection conn, const char* str)
@@ -310,7 +312,7 @@ public:
 private:
 	static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
-		//s_pCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
+		s_pClientCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
 	}
 
 	void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)
