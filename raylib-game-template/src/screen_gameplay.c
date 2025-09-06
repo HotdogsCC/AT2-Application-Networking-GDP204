@@ -25,6 +25,7 @@
 
 #include "raylib.h"
 #include "screens.h"
+#include "networking.h"
 
 //----------------------------------------------------------------------------------
 // Module Variables Definition (local)
@@ -33,11 +34,6 @@ static int framesCounter = 0;
 static int finishScreen = 0;
 
 //player position
-typedef struct Vector2Int
-{
-    int x;
-    int y;
-} Vector2Int;
 Vector2Int position = {0, 0};
 
 int moveSpeed = 5;
@@ -86,6 +82,8 @@ void UpdateGameplayScreen(void)
         position.y += moveSpeed;
     }
 
+    UpdateNetworkPacket(position.x, position.y);
+
 }
 
 // Gameplay Screen Draw logic
@@ -97,7 +95,16 @@ void DrawGameplayScreen(void)
     DrawTextEx(font, "GAMEPLAY SCREEN", pos, font.baseSize*3.0f, 4, MAROON);
     DrawText("PRESS ENTER or TAP to JUMP to ENDING SCREEN", 130, 220, 20, MAROON);
 
+    //draw this player
     DrawRectangle(position.x, position.y, 20, 20, RED);
+
+    //draw others
+    for (int i = 1; i <= GetClientCount(); i++)
+    {
+        Vector2Int clientPos = GetClientPosition(i);
+
+        DrawRectangle(clientPos.x, clientPos.y, 20, 20, GREEN);
+    }
 }
 
 // Gameplay Screen Unload logic

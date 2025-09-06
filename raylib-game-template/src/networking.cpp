@@ -33,29 +33,54 @@
 
 /////////////////////////////////////////////////////////////////////////////
 //
-// Common stuff
+// Common
 //
 /////////////////////////////////////////////////////////////////////////////
 
-bool g_bQuit = false;
+#define NETWORK_PACKET_SIZE 9
 
+//network packet data
+int myID = -1;
+char myPacket[NETWORK_PACKET_SIZE];
+//sends data to the server regarding player ID and position
+void UpdateNetworkPacket(int posX, int posY)
+{
+	myPacket[0] = myID; //because of data conversion, this will break at 255
+						//if you have over 255 players, you may have other issues
+
+	//breaks the ints into 4 seperate chars
+	myPacket[1] = (posX >> 0) & 0xFF;
+	myPacket[2] = (posX >> 8) & 0xFF;
+	myPacket[3] = (posX >> 16) & 0xFF;
+	myPacket[4] = (posX >> 24) & 0xFF;
+
+	myPacket[5] = (posY >> 0) & 0xFF;
+	myPacket[6] = (posY >> 8) & 0xFF;
+	myPacket[7] = (posY >> 16) & 0xFF;
+	myPacket[8] = (posY >> 24) & 0xFF;
+}
+std::map<int, Vector2Int> clientPositions;
+
+
+//forward decl
 class NetworkClient;
 class NetworkServer;
 
+//instances of the network sessions
 NetworkClient* myClient = nullptr;
 NetworkServer* myServer = nullptr;
+NetworkServer* s_pCallbackInstance;
+NetworkClient* s_pClientCallbackInstance;
 
+//network session information
 SteamNetworkingMicroseconds g_logTimeZero;
-
 ISteamNetworkingSockets* m_pInterface;
 HSteamNetPollGroup m_hPollGroup;
 std::vector< HSteamNetConnection> m_Clients;
 HSteamNetConnection m_hConnection;
 HSteamListenSocket m_hListenSock;
-
 NetworkStatus networkStatus = INACTIVE;
-NetworkServer* s_pCallbackInstance;
-NetworkClient* s_pClientCallbackInstance;
+
 
 // kills the session
 static void NukeProcess(int rc)
@@ -162,12 +187,12 @@ private:
 	{
 		s_pCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
 	}
-
+public:
 	void SendStringToClient(HSteamNetConnection conn, const char* str)
 	{
 		m_pInterface->SendMessageToConnection(conn, str, (uint32)strlen(str), k_nSteamNetworkingSend_Reliable, nullptr);
 	}
-
+private:
 	void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
 		char temp[1024];
@@ -263,8 +288,14 @@ private:
 			}
 
 			// Send them a welcome message
-			sprintf(temp, "Welcome to the server");
-			SendStringToClient(pInfo->m_hConn, temp);
+			//sprintf(temp, "Welcome to the server");
+			//SendStringToClient(pInfo->m_hConn, temp);
+
+			//send them their ID
+			std::string clientIDPacket = "ID";
+			char clientID = (char)(m_Clients.size() + 1);
+			clientIDPacket.append(&clientID);
+			SendStringToClient(pInfo->m_hConn, clientIDPacket.c_str());
 
 			// Add them to the client list, using std::map wacky syntax
 			m_Clients.push_back(pInfo->m_hConn);
@@ -329,8 +360,6 @@ private:
 		case k_ESteamNetworkingConnectionState_ClosedByPeer:
 		case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
 		{
-			g_bQuit = true;
-
 			// Print an appropriate message
 			if (pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connecting)
 			{
@@ -548,12 +577,74 @@ void UpdateServer()
 
 		const char* cmd = sCmd.c_str();
 		Printf(cmd);
+
+		int clientID = (int)cmd[0];
+
+		int clientPosX = 0;
+		clientPosX |= (static_cast<unsigned char>(cmd[1]) << 0);
+		clientPosX |= (static_cast<unsigned char>(cmd[2]) << 8);
+		clientPosX |= (static_cast<unsigned char>(cmd[3]) << 16);
+		clientPosX |= (static_cast<unsigned char>(cmd[4]) << 24);
+
+		int clientPosY = 0;
+		clientPosY |= (static_cast<unsigned char>(cmd[5]) << 0);
+		clientPosY |= (static_cast<unsigned char>(cmd[6]) << 8);
+		clientPosY |= (static_cast<unsigned char>(cmd[7]) << 16);
+		clientPosY |= (static_cast<unsigned char>(cmd[8]) << 24);
+		Vector2Int clientPos = { clientPosX, clientPosY };
+
+		clientPositions[clientID] = clientPos;
 	}
 
 	//
 	// Poll Callbacks
 	//
-	//s_pCallbackInstance = this;
+	
+
+	//perpare position data
+	std::string positionDataPacket = "P"; //P means positional data,
+	//add client count
+	char clientCountChar = (char)GetClientCount();
+	positionDataPacket.append(&clientCountChar);
+	//add server position
+	char serverId = (char)-1;
+	positionDataPacket.append(&serverId);  //id
+	//position
+	for (int i = 1; i <= 8; i++)
+	{
+		positionDataPacket.append(&myPacket[i]);
+	}
+	
+	//other clients positions
+	for (int i = 0; i < GetClientCount(); i++)
+	{
+		Vector2Int clientPos = GetClientPosition(1);
+
+		char clientPacket[8];
+		//breaks the ints into 4 seperate chars
+		clientPacket[0] = (clientPos.x >> 0) & 0xFF;
+		clientPacket[1] = (clientPos.x >> 8) & 0xFF;
+		clientPacket[2] = (clientPos.x >> 16) & 0xFF;
+		clientPacket[3] = (clientPos.x >> 24) & 0xFF;
+
+		clientPacket[4] = (clientPos.y >> 0) & 0xFF;
+		clientPacket[5] = (clientPos.y >> 8) & 0xFF;
+		clientPacket[6] = (clientPos.y >> 16) & 0xFF;
+		clientPacket[7] = (clientPos.y >> 24) & 0xFF;
+
+		for (int j = 0; j < 8; j++)
+		{
+			positionDataPacket.append(&clientPacket[j]);
+		}
+		
+	}
+
+	//send data to clients
+	for (auto client : m_Clients)
+	{
+		myServer->SendStringToClient(client, positionDataPacket.c_str());
+	}
+
 	m_pInterface->RunCallbacks();
 
 }
@@ -571,6 +662,39 @@ void UpdateClient()
 			FatalError("Error checking for messages");
 		else
 		{
+			//is this an id packet?
+			char* message = (char*)pIncomingMsg->m_pData;
+			if(message[0] == 'I' || message[1] == 'D')
+			{
+				//set the ID
+				myID = message[2];
+			}
+
+			//is this a position packet?
+			if (message[0] == 'P')
+			{
+				Printf("recieved position");
+				int clientCount = (int)message[1];
+
+				for (int i = 0; i < clientCount; i++)
+				{
+					int clientPosX = 0;
+					clientPosX |= (static_cast<unsigned char>(message[(i * 8) + 3]) << 0);
+					clientPosX |= (static_cast<unsigned char>(message[(i * 8) + 4]) << 8);
+					clientPosX |= (static_cast<unsigned char>(message[(i * 8) + 5]) << 16);
+					clientPosX |= (static_cast<unsigned char>(message[(i * 8) + 6]) << 24);
+
+					int clientPosY = 0;
+					clientPosY |= (static_cast<unsigned char>(message[(i * 8) + 7]) << 0);
+					clientPosY |= (static_cast<unsigned char>(message[(i * 8) + 8]) << 8);
+					clientPosY |= (static_cast<unsigned char>(message[(i * 8) + 9]) << 16);
+					clientPosY |= (static_cast<unsigned char>(message[(i * 8) + 10]) << 24);
+					Vector2Int clientPos = { clientPosX, clientPosY };
+
+					clientPositions[message[(i * 8) + 2]] = clientPos;
+				}
+			}
+
 			// Just echo anything we get from the server
 			fwrite(pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout);
 			fputc('\n', stdout);
@@ -585,8 +709,12 @@ void UpdateClient()
 	std::string DebugMessage = "Client message";
 
 	// Send it to the server and let them parse it
-	m_pInterface->SendMessageToConnection(m_hConnection, DebugMessage.c_str(),
-		(uint32)DebugMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
+	//m_pInterface->SendMessageToConnection(m_hConnection, DebugMessage.c_str(),
+	//	(uint32)DebugMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
+
+	m_pInterface->SendMessageToConnection(m_hConnection, myPacket,
+		NETWORK_PACKET_SIZE, k_nSteamNetworkingSend_Unreliable, nullptr);
+
 }
 
 void CloseServer()
@@ -702,3 +830,24 @@ void CloseNetwork()
 	}
 }
 
+int GetClientCount()
+{
+	//return m_Clients.size();
+	return clientPositions.size();
+}
+
+Vector2Int GetClientPosition(int clientID)
+{
+	//make sure client id is valid
+	if (clientID > GetClientCount())
+	{
+		return { 0, 0 };
+	}
+
+	return clientPositions[clientID];
+}
+
+enum NetworkStatus GetNetworkStatus()
+{
+	return networkStatus;
+}
