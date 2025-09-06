@@ -82,7 +82,7 @@ void UpdateGameplayScreen(void)
         position.y += moveSpeed;
     }
 
-    UpdateNetworkPacket(position.x, position.y);
+    UpdatePacketPosition(position.x, position.y);
 
 }
 

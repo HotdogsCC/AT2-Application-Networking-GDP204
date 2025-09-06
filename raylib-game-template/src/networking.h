@@ -6,8 +6,8 @@ typedef struct Vector2Int
 typedef struct DataPacket
 {
 	char id;
-	char posX[4];
-	char posY[4];
+	int posX;
+	int posY;
 } DataPacket;
 
 
@@ -32,7 +32,7 @@ enum NetworkStatus
 	void CloseNetwork();
 
 	//called in screen_gameplay
-	void UpdateNetworkPacket(int posX, int posY);
+	void UpdatePacketPosition(int posX, int posY);
 	int GetClientCount();
 	Vector2Int GetClientPosition(int clientID);
 	enum NetworkStatus GetNetworkStatus();

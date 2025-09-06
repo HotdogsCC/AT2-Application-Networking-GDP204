@@ -29,7 +29,83 @@
 #include <signal.h>
 #endif
 
+#define NETWORK_PACKET_SIZE 9
 #include "networking.h"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// helper functions
+//
+/////////////////////////////////////////////////////////////////////////////
+
+//takes in an int and returns in 4 chars
+void SerializeInt(const int inInt, char* outChars)
+{
+	outChars[0] = (inInt >> 0) & 0xFF;
+	outChars[1] = (inInt >> 8) & 0xFF;
+	outChars[2] = (inInt >> 16) & 0xFF;
+	outChars[3] = (inInt >> 24) & 0xFF;
+}
+
+//takes in a series of chars, reading from the start index
+const int DeserializeInt(const char* inChars, const int startIndex)
+{
+	int deserializedInt = 0;
+	deserializedInt |= (static_cast<unsigned char>(inChars[startIndex]) << 0);
+	deserializedInt |= (static_cast<unsigned char>(inChars[startIndex + 1]) << 8);
+	deserializedInt |= (static_cast<unsigned char>(inChars[startIndex + 2]) << 16);
+	deserializedInt |= (static_cast<unsigned char>(inChars[startIndex + 3]) << 24);
+
+	return deserializedInt;
+}
+
+//takes in 4 chars and returns the int
+const int DeserializeInt(const char* inChars)
+{
+	return DeserializeInt(inChars, 0);
+}
+
+
+
+//takes in the data packet struct and returns a collection of chars
+void SerializeDataPacket(const DataPacket& inPacket, char* outPacket)
+{
+	char tempChars[4];
+
+	//set ID
+	outPacket[0] = inPacket.id;
+
+	//set posX
+	SerializeInt(inPacket.posX, tempChars);
+	outPacket[1] = tempChars[0];
+	outPacket[2] = tempChars[1];
+	outPacket[3] = tempChars[2];
+	outPacket[4] = tempChars[3];
+
+	//set posY
+	SerializeInt(inPacket.posY, tempChars);
+	outPacket[5] = tempChars[0];
+	outPacket[6] = tempChars[1];
+	outPacket[7] = tempChars[2];
+	outPacket[8] = tempChars[3];
+
+}
+
+DataPacket DeserializeDataPacket(const char* inPacket)
+{
+	DataPacket outPacket;
+
+	//set ID
+	outPacket.id = inPacket[0];
+
+	//set posX
+	outPacket.posX = DeserializeInt(inPacket, 1);
+
+	//set posY
+	outPacket.posY = DeserializeInt(inPacket, 5);
+
+	return outPacket;
+}
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -37,27 +113,18 @@
 //
 /////////////////////////////////////////////////////////////////////////////
 
-#define NETWORK_PACKET_SIZE 9
 
 //network packet data
 int myID = -1;
-char myPacket[NETWORK_PACKET_SIZE];
+DataPacket myPacket;
 //sends data to the server regarding player ID and position
-void UpdateNetworkPacket(int posX, int posY)
+void UpdatePacketPosition(int posX, int posY)
 {
-	myPacket[0] = myID; //because of data conversion, this will break at 255
+	myPacket.id = myID; //because of data conversion, this will break at 255
 						//if you have over 255 players, you may have other issues
 
-	//breaks the ints into 4 seperate chars
-	myPacket[1] = (posX >> 0) & 0xFF;
-	myPacket[2] = (posX >> 8) & 0xFF;
-	myPacket[3] = (posX >> 16) & 0xFF;
-	myPacket[4] = (posX >> 24) & 0xFF;
-
-	myPacket[5] = (posY >> 0) & 0xFF;
-	myPacket[6] = (posY >> 8) & 0xFF;
-	myPacket[7] = (posY >> 16) & 0xFF;
-	myPacket[8] = (posY >> 24) & 0xFF;
+	myPacket.posX = posX;
+	myPacket.posY = posY;
 }
 std::map<int, Vector2Int> clientPositions;
 
@@ -578,22 +645,9 @@ void UpdateServer()
 		const char* cmd = sCmd.c_str();
 		Printf(cmd);
 
-		int clientID = (int)cmd[0];
+		DataPacket incomingDataPacket = DeserializeDataPacket(cmd);
 
-		int clientPosX = 0;
-		clientPosX |= (static_cast<unsigned char>(cmd[1]) << 0);
-		clientPosX |= (static_cast<unsigned char>(cmd[2]) << 8);
-		clientPosX |= (static_cast<unsigned char>(cmd[3]) << 16);
-		clientPosX |= (static_cast<unsigned char>(cmd[4]) << 24);
-
-		int clientPosY = 0;
-		clientPosY |= (static_cast<unsigned char>(cmd[5]) << 0);
-		clientPosY |= (static_cast<unsigned char>(cmd[6]) << 8);
-		clientPosY |= (static_cast<unsigned char>(cmd[7]) << 16);
-		clientPosY |= (static_cast<unsigned char>(cmd[8]) << 24);
-		Vector2Int clientPos = { clientPosX, clientPosY };
-
-		clientPositions[clientID] = clientPos;
+		clientPositions[incomingDataPacket.id] = { incomingDataPacket.posX, incomingDataPacket.posY };
 	}
 
 	//
@@ -714,7 +768,10 @@ void UpdateClient()
 	//m_pInterface->SendMessageToConnection(m_hConnection, DebugMessage.c_str(),
 	//	(uint32)DebugMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
 
-	m_pInterface->SendMessageToConnection(m_hConnection, myPacket,
+	char serialPacket[NETWORK_PACKET_SIZE];
+	SerializeDataPacket(myPacket, serialPacket);
+
+	m_pInterface->SendMessageToConnection(m_hConnection, serialPacket,
 		NETWORK_PACKET_SIZE, k_nSteamNetworkingSend_Unreliable, nullptr);
 
 }
