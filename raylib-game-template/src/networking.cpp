@@ -53,6 +53,8 @@ std::vector< HSteamNetConnection> m_Clients;
 HSteamNetConnection m_hConnection;
 HSteamListenSocket m_hListenSock;
 
+NetworkStatus networkStatus = INACTIVE;
+
 // kills the session
 static void NukeProcess(int rc)
 {
@@ -149,6 +151,8 @@ public:
 		if (m_hPollGroup == k_HSteamNetPollGroup_Invalid)
 			FatalError("Failed to listen on port %d", nPort);
 		Printf("Server listening on port %d\n", nPort);
+
+		networkStatus = SERVER_ACTIVE;
 
 	}
 private:
@@ -300,6 +304,8 @@ public:
 		m_hConnection = m_pInterface->ConnectByIPAddress(serverAddr, 1, &opt);
 		if (m_hConnection == k_HSteamNetConnection_Invalid)
 			FatalError("Failed to create connection");
+
+		networkStatus = CLIENT_ACTIVE;
 	}
 private:
 	static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
@@ -504,17 +510,19 @@ void startSession(const char* argument)
 
 void StartServer()
 {
+	networkStatus = SERVER_STARTING;
 	startSession("server --port 7777");
 }
 
 void StartClient()
 {
+	networkStatus = CLIENT_STARTING;
 	startSession("client 127.0.0.1:7777");
 }
 
 void UpdateServer()
 {
-	while (!g_bQuit)
+	while (true)
 	{
 		ISteamNetworkingMessage* pIncomingMsg = nullptr;
 		int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
@@ -581,6 +589,7 @@ void UpdateClient()
 
 void CloseServer()
 {
+	networkStatus = INACTIVE;
 	// Close all the connections
 	Printf("Closing connections...\n");
 	for (auto it : m_Clients)
@@ -629,6 +638,7 @@ void CloseServer()
 
 void CloseClient()
 {
+	networkStatus = INACTIVE;
 	// Close the connection gracefully.
 	// We use linger mode to ask for any remaining reliable data
 	// to be flushed out.  But remember this is an application
@@ -659,3 +669,34 @@ void CloseClient()
 	//LocalUserInput_Kill();
 	NukeProcess(0);
 }
+
+void UpdateNetwork()
+{
+	switch (networkStatus)
+	{
+	case SERVER_ACTIVE:
+		UpdateServer();
+		break;
+	case CLIENT_ACTIVE:
+		UpdateClient();
+		break;
+	default:
+		break;
+	}
+}
+
+void CloseNetwork()
+{
+	switch (networkStatus)
+	{
+	case SERVER_ACTIVE:
+		CloseServer();
+		break;
+	case CLIENT_ACTIVE:
+		CloseServer();
+		break;
+	default:
+		break;
+	}
+}
+

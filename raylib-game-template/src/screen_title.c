@@ -23,6 +23,7 @@
 *
 **********************************************************************************************/
 
+#include "networking.h"
 #include "raylib.h"
 #include "screens.h"
 
@@ -32,8 +33,14 @@
 static int framesCounter = 0;
 static int finishScreen = 0;
 
-static int buttonWidth = 50;
-static int buttonHeight = 30;
+static float buttonsDistance = 200;
+static int textFontSize = 20;
+
+Rectangle serverButtonRect;
+Rectangle clientButtonRect;
+
+bool serverIsHovered = false;
+bool clientIsHovered = false;
 
 //----------------------------------------------------------------------------------
 // Title Screen Functions Definition
@@ -42,7 +49,24 @@ static int buttonHeight = 30;
 // Title Screen Initialization logic
 void InitTitleScreen(void)
 {
-    
+    //button set up
+    const float buttonWidth = 200;
+    const float buttonHeight = 150;
+    const float buttonY = (GetScreenHeight() / 2) - (buttonHeight / 2);
+
+    //server button set up
+    const float serverButtonX = (GetScreenWidth() / 2) - (buttonWidth / 2) - buttonsDistance;
+    serverButtonRect.x = serverButtonX;
+    serverButtonRect.y = buttonY;
+    serverButtonRect.width = buttonWidth;
+    serverButtonRect.height = buttonHeight;
+
+    //client button set up
+    const float clientButtonX = (GetScreenWidth() / 2) - (buttonWidth / 2) + buttonsDistance;
+    clientButtonRect.x = clientButtonX;
+    clientButtonRect.y = buttonY;
+    clientButtonRect.width = buttonWidth;
+    clientButtonRect.height = buttonHeight;
 }
 
 // Title Screen Update logic
@@ -51,11 +75,24 @@ void UpdateTitleScreen(void)
     // Press enter or tap to change to GAMEPLAY screen
     if (IsKeyPressed(KEY_ENTER) || IsGestureDetected(GESTURE_TAP))
     {
-        //finishScreen = 1;   // OPTIONS
-        finishScreen = 2;   // GAMEPLAY
-        PlaySound(fxCoin);
+        if (serverIsHovered)
+        {
+            StartServer();
+            finishScreen = 2; //GAMEPLAY
+            PlaySound(fxCoin);
+        }
+        if (clientIsHovered)
+        {
+            StartClient();
+            finishScreen = 2; //GAMEPLAY
+            PlaySound(fxCoin);
+        }
+        
     }
 
+    //is the mouse hovering over the button?
+    serverIsHovered = CheckCollisionPointRec(GetMousePosition(), serverButtonRect);
+    clientIsHovered = CheckCollisionPointRec(GetMousePosition(), clientButtonRect);
 
 }
 
@@ -68,11 +105,28 @@ void DrawTitleScreen(void)
     DrawTextEx(font, "TITLE SCREEN", pos, font.baseSize*3.0f, 4, DARKGREEN);
     DrawText("PRESS ENTER or TAP to JUMP to GAMEPLAY SCREEN", 120, 220, 20, DARKGREEN);
 
-    //draw server button
-    const int serverButtonX = (GetScreenWidth() / 2) - (buttonWidth / 2);
-    const int serverButtonY = (GetScreenHeight() / 2) - (buttonHeight / 2);
+    //draws server and client buttons
+    if (serverIsHovered)
+    {
+        DrawRectangleRec(serverButtonRect, LIGHTGRAY);
+    }
+    else
+    {
+        DrawRectangleRec(serverButtonRect, GRAY);
+    }
+
+    if (clientIsHovered)
+    {
+        DrawRectangleRec(clientButtonRect, LIGHTGRAY);
+    }
+    else
+    {
+        DrawRectangleRec(clientButtonRect, GRAY);
+    }
     
-    //DrawRectangle(serverButtonX, serverButtonY, )
+    
+    DrawText("Server", serverButtonRect.x, serverButtonRect.y, textFontSize, WHITE);
+    DrawText("Client", clientButtonRect.x, clientButtonRect.y, textFontSize, WHITE);
 }
 
 // Title Screen Unload logic

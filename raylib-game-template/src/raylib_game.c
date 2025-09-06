@@ -22,8 +22,6 @@
 
 #include "networking.h"
 
-
-
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>
 #endif
@@ -92,37 +90,21 @@ int main(void)
 #else
     SetTargetFPS(60);       // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
-
-#ifdef IS_SERVER
-    StartServer();
-#else // we're a client if we are not a server
-    StartClient();
-#endif // IS_SERVER
+    
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
         UpdateDrawFrame();
 
-#ifdef IS_SERVER
-        UpdateServer();
-#else // we're a client if we are not a server
-        UpdateClient();
-#endif // IS_SERVER
+        UpdateNetwork();
     }
 #endif
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
     // Unload current screen data before closing
-
-#ifdef IS_SERVER
-    CloseServer();
-#else // we're a client if we are not a server
-    CloseClient();
-#endif // IS_SERVER
-
-
+    
     switch (currentScreen)
     {
         case LOGO: UnloadLogoScreen(); break;
@@ -132,6 +114,8 @@ int main(void)
         case ENDING: UnloadEndingScreen(); break;
         default: break;
     }
+
+    CloseNetwork();
 
     // Unload global data loaded
     UnloadFont(font);
