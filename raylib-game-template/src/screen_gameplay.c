@@ -98,6 +98,8 @@ void DrawGameplayScreen(void)
     //draw clients
     DrawRectangle(GetClientPosition(0).x, GetClientPosition(0).y, 20, 20, GREEN);
     DrawRectangle(GetClientPosition(1).x, GetClientPosition(1).y, 20, 20, GREEN);
+    DrawRectangle(GetClientPosition(2).x, GetClientPosition(2).y, 20, 20, GREEN);
+    DrawRectangle(GetClientPosition(3).x, GetClientPosition(3).y, 20, 20, GREEN);
 
     //draw this player
     DrawRectangle(position.x, position.y, 20, 20, RED);

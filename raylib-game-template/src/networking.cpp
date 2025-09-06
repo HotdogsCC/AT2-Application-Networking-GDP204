@@ -644,7 +644,7 @@ void UpdateServer()
 		pIncomingMsg->Release();
 
 		const char* cmd = sCmd.c_str();
-		Printf(cmd);
+		//Printf(cmd);
 
 		DataPacket incomingDataPacket = DeserializeDataPacket(cmd);
 
@@ -678,53 +678,7 @@ void UpdateServer()
 		
 	}
 	
-#define off
-#ifndef off
 
-	//perpare position data
-	std::string positionDataPacket = "P"; //P means positional data,
-	//add client count
-	char clientCountChar = (char)GetClientCount();
-	positionDataPacket.append(&clientCountChar);
-	//add server position
-	char serverId = (char)-1;
-	positionDataPacket.append(&serverId);  //id
-	//position
-	for (int i = 1; i <= 8; i++)
-	{
-		positionDataPacket.append(&myPacket[i]);
-	}
-	
-	//other clients positions
-	for (int i = 0; i < GetClientCount(); i++)
-	{
-		Vector2Int clientPos = GetClientPosition(1);
-
-		char clientPacket[8];
-		//breaks the ints into 4 seperate chars
-		clientPacket[0] = (clientPos.x >> 0) & 0xFF;
-		clientPacket[1] = (clientPos.x >> 8) & 0xFF;
-		clientPacket[2] = (clientPos.x >> 16) & 0xFF;
-		clientPacket[3] = (clientPos.x >> 24) & 0xFF;
-
-		clientPacket[4] = (clientPos.y >> 0) & 0xFF;
-		clientPacket[5] = (clientPos.y >> 8) & 0xFF;
-		clientPacket[6] = (clientPos.y >> 16) & 0xFF;
-		clientPacket[7] = (clientPos.y >> 24) & 0xFF;
-
-		for (int j = 0; j < 8; j++)
-		{
-			positionDataPacket.append(&clientPacket[j]);
-		}
-		
-	}
-
-	//send data to clients
-	for (auto client : m_Clients)
-	{
-		myServer->SendStringToClient(client, positionDataPacket.c_str());
-	}
-#endif
 	m_pInterface->RunCallbacks();
 
 }
@@ -748,7 +702,7 @@ void UpdateClient()
 			{
 				break;
 			}
-			if(message[0] == 'I' || message[1] == 'D')
+			if(message[0] == 'I' && message[1] == 'D')
 			{
 				//set the ID
 				myID = message[2];
@@ -756,42 +710,12 @@ void UpdateClient()
 			else
 			{
 				DataPacket incomingPacket = DeserializeDataPacket(message);
-
-				//if this data relates to us, ignore it
-				if (incomingPacket.id != myID)
-				{
-					clientPositions[incomingPacket.id] = { incomingPacket.posX, incomingPacket.posY };
-				}
-			}
-
-			//is this a position packet?
-			if (message[0] == 'P')
-			{
-				Printf("recieved position");
-				int clientCount = (int)message[1];
-
-				for (int i = 0; i < clientCount; i++)
-				{
-					int clientPosX = 0;
-					clientPosX |= (static_cast<unsigned char>(message[(i * 8) + 3]) << 0);
-					clientPosX |= (static_cast<unsigned char>(message[(i * 8) + 4]) << 8);
-					clientPosX |= (static_cast<unsigned char>(message[(i * 8) + 5]) << 16);
-					clientPosX |= (static_cast<unsigned char>(message[(i * 8) + 6]) << 24);
-
-					int clientPosY = 0;
-					clientPosY |= (static_cast<unsigned char>(message[(i * 8) + 7]) << 0);
-					clientPosY |= (static_cast<unsigned char>(message[(i * 8) + 8]) << 8);
-					clientPosY |= (static_cast<unsigned char>(message[(i * 8) + 9]) << 16);
-					clientPosY |= (static_cast<unsigned char>(message[(i * 8) + 10]) << 24);
-					Vector2Int clientPos = { clientPosX, clientPosY };
-
-					clientPositions[message[(i * 8) + 2]] = clientPos;
-				}
+				clientPositions[incomingPacket.id] = { incomingPacket.posX, incomingPacket.posY };
 			}
 
 			// Just echo anything we get from the server
-			fwrite(pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout);
-			fputc('\n', stdout);
+			//fwrite(pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout);
+			//fputc('\n', stdout);
 
 			// We don't need this anymore.
 			pIncomingMsg->Release();
