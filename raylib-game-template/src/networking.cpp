@@ -651,6 +651,8 @@ void UpdateServer()
 		clientPositions[incomingDataPacket.id] = { incomingDataPacket.posX, incomingDataPacket.posY };
 	}
 
+	clientPositions[0] = { myPacket.posX, myPacket.posY };
+
 	//
 	// Poll Callbacks
 	//
@@ -669,7 +671,9 @@ void UpdateServer()
 			char serializedPacket[NETWORK_PACKET_SIZE];
 			SerializeDataPacket(curClientPacket, serializedPacket);
 
-			myServer->SendStringToClient(client, serializedPacket);
+			//myServer->SendStringToClient(client, serializedPacket);
+			m_pInterface->SendMessageToConnection(client, serializedPacket, NETWORK_PACKET_SIZE, 
+				k_nSteamNetworkingSend_Unreliable, nullptr);
 		}
 		
 	}
@@ -751,12 +755,12 @@ void UpdateClient()
 			}
 			else
 			{
-				//DataPacket incomingPacket = DeserializeDataPacket(message);
+				DataPacket incomingPacket = DeserializeDataPacket(message);
 
 				//if this data relates to us, ignore it
-				//if (incomingPacket.id != myID)
+				if (incomingPacket.id != myID)
 				{
-					//clientPositions[incomingPacket.id] = { incomingPacket.posX, incomingPacket.posY };
+					clientPositions[incomingPacket.id] = { incomingPacket.posX, incomingPacket.posY };
 				}
 			}
 
@@ -943,4 +947,9 @@ Vector2Int GetClientPosition(int clientID)
 enum NetworkStatus GetNetworkStatus()
 {
 	return networkStatus;
+}
+
+int GetMyID()
+{
+	return myID;
 }

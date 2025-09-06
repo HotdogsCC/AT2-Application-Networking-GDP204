@@ -36,6 +36,7 @@ enum NetworkStatus
 	int GetClientCount();
 	Vector2Int GetClientPosition(int clientID);
 	enum NetworkStatus GetNetworkStatus();
+	int GetMyID();
 
 #ifdef __cplusplus
 }
