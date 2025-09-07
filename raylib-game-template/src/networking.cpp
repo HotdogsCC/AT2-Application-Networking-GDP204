@@ -33,6 +33,7 @@
 #include "networking.h"
 #define POSITION_PACKET_SIZE sizeof(PositionDataPacket)
 #define SET_ID_PACKET_SIZE sizeof(SetIDDataPacket)
+#define NICKNAME_PACKET_SIZE sizeof(NicknameDataPacket)
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -66,8 +67,6 @@ const int DeserializeInt(const char* inChars)
 {
 	return DeserializeInt(inChars, 0);
 }
-
-
 
 //takes in the data packet struct and returns a collection of chars
 void SerializePositionDataPacket(const PositionDataPacket& inPacket, char* outPacket)
@@ -138,6 +137,55 @@ SetIDDataPacket DeserializeSetIDDataPacket(char* inPacket)
 	return outPacket;
 }
 
+void SerializeNicknameDataPacket(const NicknameDataPacket& inPacket, char* outPacket)
+{
+	//set packet type
+	outPacket[0] = (char)inPacket.packetType;
+
+	//set ID
+	outPacket[1] = inPacket.id;
+
+	bool endOfName = false;
+	//set the nickname
+	for (int i = 0; i < 8; i++)
+	{
+		if (inPacket.nickname[i] == '\0')
+		{
+			endOfName = true;
+		}
+
+		if (endOfName)
+		{
+			outPacket[i + 2] = ' ';
+		}
+		else
+		{
+			outPacket[i + 2] = inPacket.nickname[i];
+		}
+
+		
+	}
+}
+
+NicknameDataPacket DeserializeNicknameDataPacket(char* inPacket)
+{
+	NicknameDataPacket outPacket;
+
+	//set packet type
+	outPacket.packetType = (PacketType)inPacket[0];
+
+	//set ID
+	outPacket.id = inPacket[1];
+
+	//set the nickname
+	for (int i = 0; i < 8; i++)
+	{
+		outPacket.nickname[i] = inPacket[i+2];
+	}
+
+	return outPacket;
+}
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Common
@@ -147,7 +195,7 @@ SetIDDataPacket DeserializeSetIDDataPacket(char* inPacket)
 
 //network packet data
 int myID = 0;
-char myNick[8];
+char myNick[9];
 PositionDataPacket myPositionPacket;
 //sends data to the server regarding player ID and position
 void UpdatePacketPosition(int posX, int posY)
@@ -501,6 +549,8 @@ private:
 
 		case k_ESteamNetworkingConnectionState_Connected:
 			Printf("Connected to server OK");
+
+			
 			break;
 
 		default:
@@ -648,6 +698,11 @@ void startSession(const char* argument)
 void StartServer()
 {
 	networkStatus = SERVER_STARTING;
+	for (int i = 0; i < 8; i++)
+	{
+		clientNicknames[0][i] = myNick[i];
+	}
+	
 	startSession("server --port 7777");
 }
 
@@ -659,6 +714,9 @@ void StartClient()
 
 void UpdateServer()
 {
+	//temp flag
+	bool shouldUpdateNicknames = false;
+
 	while (true)
 	{
 		ISteamNetworkingMessage* pIncomingMsg = nullptr;
@@ -678,15 +736,48 @@ void UpdateServer()
 		// Populate a std::string with the data we received, assuming it's a character array
 		sCmd.assign((const char*)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
 
-		// We don't need this anymore.
-		pIncomingMsg->Release();
+		
 
 		const char* cmd = sCmd.c_str();
 		//Printf(cmd);
 
-		PositionDataPacket incomingDataPacket = DeserializePositionDataPacket(cmd);
+		
 
-		clientPositions[incomingDataPacket.id] = { incomingDataPacket.posX, incomingDataPacket.posY };
+		char* message = (char*)pIncomingMsg->m_pData;
+		if (message != nullptr)
+		{
+			//get the type
+			PacketType packetType = (PacketType)message[0];
+
+			switch (packetType)
+			{
+			case RECEIVED_POSITION_DATA:
+				PositionDataPacket incomingPos = DeserializePositionDataPacket(message);
+				clientPositions[incomingPos.id] = { incomingPos.posX, incomingPos.posY };
+				break;
+			case RECEIVED_SET_ID:
+				SetIDDataPacket incomingID = DeserializeSetIDDataPacket(message);
+				myID = incomingID.id;
+				break;
+			case SEND_NICKNAME_TO_SERVER:
+				NicknameDataPacket incomingNick = DeserializeNicknameDataPacket(message);
+				for (int i = 0; i < 8; i++)
+				{
+					clientNicknames[incomingNick.id][i] = incomingNick.nickname[i];
+				}
+				shouldUpdateNicknames = true;
+				break;
+			case SEND_NICKNAMES_TO_CLIENT:
+				break;
+			default:
+				break;
+			}
+		}
+
+		
+
+		// We don't need this anymore.
+		pIncomingMsg->Release();
 	}
 
 	clientPositions[0] = { myPositionPacket.posX, myPositionPacket.posY };
@@ -710,10 +801,32 @@ void UpdateServer()
 			char serializedPacket[POSITION_PACKET_SIZE];
 			SerializePositionDataPacket(curClientPacket, serializedPacket);
 
-			//myServer->SendStringToClient(client, serializedPacket);
 			m_pInterface->SendMessageToConnection(client, serializedPacket, POSITION_PACKET_SIZE,
 				k_nSteamNetworkingSend_Unreliable, nullptr);
 		}
+
+		if (shouldUpdateNicknames)
+		{
+			//send nickname data
+			for (auto& clientNick : clientNicknames)
+			{
+				NicknameDataPacket nickPacket;
+				nickPacket.packetType = SEND_NICKNAMES_TO_CLIENT;
+				nickPacket.id = clientNick.first;
+				//copy nickname data
+				for (int i = 0; i < 8; i++)
+				{
+					nickPacket.nickname[i] = clientNick.second[i];
+				}
+
+				char serialNickPacket[NICKNAME_PACKET_SIZE];
+				SerializeNicknameDataPacket(nickPacket, serialNickPacket);
+
+				m_pInterface->SendMessageToConnection(client, serialNickPacket, NICKNAME_PACKET_SIZE,
+					k_nSteamNetworkingSend_Reliable, nullptr);
+			}
+		}
+		
 		
 	}
 	
@@ -754,10 +867,30 @@ void UpdateClient()
 			case RECEIVED_SET_ID:
 				SetIDDataPacket incomingID = DeserializeSetIDDataPacket(message);
 				myID = incomingID.id;
+
+				//send the server our nickname
+				NicknameDataPacket nickPacket;
+				nickPacket.packetType = SEND_NICKNAME_TO_SERVER;
+				nickPacket.id = myID;
+				for (int i = 0; i < 8; i++)
+				{
+					nickPacket.nickname[i] = myNick[i];
+				}
+
+				char serialNickname[NICKNAME_PACKET_SIZE];
+				SerializeNicknameDataPacket(nickPacket, serialNickname);
+
+				m_pInterface->SendMessageToConnection(m_hConnection, serialNickname,
+					NICKNAME_PACKET_SIZE, k_nSteamNetworkingSend_Reliable, nullptr);
 				break;
-			case SEND_NICKNAME:
+			case SEND_NICKNAME_TO_SERVER:
 				break;
-			case RECEIVED_NICKNAME:
+			case SEND_NICKNAMES_TO_CLIENT:
+				NicknameDataPacket incomingNick = DeserializeNicknameDataPacket(message);
+				for (int i = 0; i < 8; i++)
+				{
+					clientNicknames[incomingNick.id][i] = incomingNick.nickname[i];
+				}
 				break;
 			default:
 				break;
@@ -926,6 +1059,16 @@ enum NetworkStatus GetNetworkStatus()
 int GetMyID()
 {
 	return myID;
+}
+
+char* GetNickname()
+{
+	return myNick;
+}
+
+char* GetClientNickname(int clientID)
+{
+	return clientNicknames[clientID];
 }
 
 void SetNickname(char* inNick)

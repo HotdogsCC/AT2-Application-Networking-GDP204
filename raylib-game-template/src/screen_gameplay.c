@@ -102,11 +102,20 @@ void DrawGameplayScreen(void)
         if (Vector2Int_IsValid(itClientPos) && i != GetMyID())
         {
             DrawRectangle(itClientPos.x, itClientPos.y, 20, 20, GREEN);
+            const char* clientNick = GetClientNickname(i);
+            char clientNickWithTerminator[9];
+            for (int i = 0; i < 8; i++)
+            {
+                clientNickWithTerminator[i] = clientNick[i];
+            }
+            clientNickWithTerminator[8] = '\0';
+            DrawText(clientNickWithTerminator, itClientPos.x, itClientPos.y - 20, 20, WHITE);
         }
     }
 
     //draw this player
     DrawRectangle(position.x, position.y, 20, 20, RED);
+    DrawText(GetNickname(), position.x, position.y - 20, 20, WHITE);
 
     
 

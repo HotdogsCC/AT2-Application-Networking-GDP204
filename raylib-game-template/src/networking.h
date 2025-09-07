@@ -22,8 +22,8 @@ enum NetworkStatus
 enum PacketType {
 	RECEIVED_POSITION_DATA,
 	RECEIVED_SET_ID,
-	SEND_NICKNAME,
-	RECEIVED_NICKNAME
+	SEND_NICKNAME_TO_SERVER,
+	SEND_NICKNAMES_TO_CLIENT
 
 };
 
@@ -63,7 +63,9 @@ typedef struct NicknameDataPacket
 	enum NetworkStatus GetNetworkStatus();
 	int GetMyID();
 
+	char* GetNickname();
 	void SetNickname(char* inNick);
+	char* GetClientNickname(int clientID);
 
 	int Vector2Int_IsValid(Vector2Int a);
 
