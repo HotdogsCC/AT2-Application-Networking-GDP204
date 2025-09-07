@@ -3,13 +3,6 @@ typedef struct Vector2Int
 	int x;
 	int y;
 } Vector2Int;
-typedef struct DataPacket
-{
-	char id;
-	int posX;
-	int posY;
-} DataPacket;
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +16,23 @@ enum NetworkStatus
 	CLIENT_STARTING,
 	CLIENT_ACTIVE
 };
+
+enum PacketType {
+	RECEIVED_POSITION_DATA,
+	RECEIVED_SET_ID,
+	SEND_NICKNAME,
+	RECEIVED_NICKNAME
+
+};
+
+typedef struct PositionDataPacket
+{
+	enum PacketType packetType;
+	char id;
+	int posX;
+	int posY;
+} PositionDataPacket;
+
 	//called when game scene is started
 	void StartServer();
 	void StartClient();
@@ -41,3 +51,4 @@ enum NetworkStatus
 #ifdef __cplusplus
 }
 #endif
+

@@ -29,7 +29,7 @@
 #include <signal.h>
 #endif
 
-#define NETWORK_PACKET_SIZE 9
+#define NETWORK_PACKET_SIZE 10
 #include "networking.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -68,41 +68,47 @@ const int DeserializeInt(const char* inChars)
 
 
 //takes in the data packet struct and returns a collection of chars
-void SerializeDataPacket(const DataPacket& inPacket, char* outPacket)
+void SerializePositionDataPacket(const PositionDataPacket& inPacket, char* outPacket)
 {
 	char tempChars[4];
 
+	//set packet type
+	outPacket[0] = (char)inPacket.packetType;
+
 	//set ID
-	outPacket[0] = inPacket.id;
+	outPacket[1] = inPacket.id;
 
 	//set posX
 	SerializeInt(inPacket.posX, tempChars);
-	outPacket[1] = tempChars[0];
-	outPacket[2] = tempChars[1];
-	outPacket[3] = tempChars[2];
-	outPacket[4] = tempChars[3];
+	outPacket[2] = tempChars[0];
+	outPacket[3] = tempChars[1];
+	outPacket[4] = tempChars[2];
+	outPacket[5] = tempChars[3];
 
 	//set posY
 	SerializeInt(inPacket.posY, tempChars);
-	outPacket[5] = tempChars[0];
-	outPacket[6] = tempChars[1];
-	outPacket[7] = tempChars[2];
-	outPacket[8] = tempChars[3];
+	outPacket[6] = tempChars[0];
+	outPacket[7] = tempChars[1];
+	outPacket[8] = tempChars[2];
+	outPacket[9] = tempChars[3];
 
 }
 
-DataPacket DeserializeDataPacket(const char* inPacket)
+PositionDataPacket DeserializePositionDataPacket(const char* inPacket)
 {
-	DataPacket outPacket;
+	PositionDataPacket outPacket;
+
+	//set packet type
+	outPacket.packetType = RECEIVED_POSITION_DATA;
 
 	//set ID
-	outPacket.id = inPacket[0];
+	outPacket.id = inPacket[1];
 
 	//set posX
-	outPacket.posX = DeserializeInt(inPacket, 1);
+	outPacket.posX = DeserializeInt(inPacket, 2);
 
 	//set posY
-	outPacket.posY = DeserializeInt(inPacket, 5);
+	outPacket.posY = DeserializeInt(inPacket, 6);
 
 	return outPacket;
 }
@@ -116,15 +122,15 @@ DataPacket DeserializeDataPacket(const char* inPacket)
 
 //network packet data
 int myID = -1;
-DataPacket myPacket;
+PositionDataPacket myPositionPacket;
 //sends data to the server regarding player ID and position
 void UpdatePacketPosition(int posX, int posY)
 {
-	myPacket.id = myID; //because of data conversion, this will break at 255
+	myPositionPacket.id = myID; //because of data conversion, this will break at 255
 						//if you have over 255 players, you may have other issues
 
-	myPacket.posX = posX;
-	myPacket.posY = posY;
+	myPositionPacket.posX = posX;
+	myPositionPacket.posY = posY;
 }
 std::map<int, Vector2Int> clientPositions;
 
@@ -646,12 +652,12 @@ void UpdateServer()
 		const char* cmd = sCmd.c_str();
 		//Printf(cmd);
 
-		DataPacket incomingDataPacket = DeserializeDataPacket(cmd);
+		PositionDataPacket incomingDataPacket = DeserializePositionDataPacket(cmd);
 
 		clientPositions[incomingDataPacket.id] = { incomingDataPacket.posX, incomingDataPacket.posY };
 	}
 
-	clientPositions[0] = { myPacket.posX, myPacket.posY };
+	clientPositions[0] = { myPositionPacket.posX, myPositionPacket.posY };
 
 	//
 	// Poll Callbacks
@@ -663,13 +669,13 @@ void UpdateServer()
 		//in clientPos, first means its ID and second means its position
 		for (auto& clientPos : clientPositions)
 		{
-			DataPacket curClientPacket;
+			PositionDataPacket curClientPacket;
 			curClientPacket.id = clientPos.first;
 			curClientPacket.posX = clientPos.second.x;
 			curClientPacket.posY = clientPos.second.y;
 
 			char serializedPacket[NETWORK_PACKET_SIZE];
-			SerializeDataPacket(curClientPacket, serializedPacket);
+			SerializePositionDataPacket(curClientPacket, serializedPacket);
 
 			//myServer->SendStringToClient(client, serializedPacket);
 			m_pInterface->SendMessageToConnection(client, serializedPacket, NETWORK_PACKET_SIZE, 
@@ -709,7 +715,7 @@ void UpdateClient()
 			}
 			else
 			{
-				DataPacket incomingPacket = DeserializeDataPacket(message);
+				PositionDataPacket incomingPacket = DeserializePositionDataPacket(message);
 				clientPositions[incomingPacket.id] = { incomingPacket.posX, incomingPacket.posY };
 			}
 
@@ -731,7 +737,7 @@ void UpdateClient()
 	//	(uint32)DebugMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
 
 	char serialPacket[NETWORK_PACKET_SIZE];
-	SerializeDataPacket(myPacket, serialPacket);
+	SerializePositionDataPacket(myPositionPacket, serialPacket);
 
 	m_pInterface->SendMessageToConnection(m_hConnection, serialPacket,
 		NETWORK_PACKET_SIZE, k_nSteamNetworkingSend_Unreliable, nullptr);
