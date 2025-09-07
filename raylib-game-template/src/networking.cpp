@@ -29,8 +29,8 @@
 #include <signal.h>
 #endif
 
-#define NETWORK_PACKET_SIZE 10
 #include "networking.h"
+#define POSITION_PACKET_SIZE sizeof(PositionDataPacket)
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -674,11 +674,11 @@ void UpdateServer()
 			curClientPacket.posX = clientPos.second.x;
 			curClientPacket.posY = clientPos.second.y;
 
-			char serializedPacket[NETWORK_PACKET_SIZE];
+			char serializedPacket[POSITION_PACKET_SIZE];
 			SerializePositionDataPacket(curClientPacket, serializedPacket);
 
 			//myServer->SendStringToClient(client, serializedPacket);
-			m_pInterface->SendMessageToConnection(client, serializedPacket, NETWORK_PACKET_SIZE, 
+			m_pInterface->SendMessageToConnection(client, serializedPacket, POSITION_PACKET_SIZE,
 				k_nSteamNetworkingSend_Unreliable, nullptr);
 		}
 		
@@ -736,11 +736,11 @@ void UpdateClient()
 	//m_pInterface->SendMessageToConnection(m_hConnection, DebugMessage.c_str(),
 	//	(uint32)DebugMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
 
-	char serialPacket[NETWORK_PACKET_SIZE];
+	char serialPacket[POSITION_PACKET_SIZE];
 	SerializePositionDataPacket(myPositionPacket, serialPacket);
 
 	m_pInterface->SendMessageToConnection(m_hConnection, serialPacket,
-		NETWORK_PACKET_SIZE, k_nSteamNetworkingSend_Unreliable, nullptr);
+		POSITION_PACKET_SIZE, k_nSteamNetworkingSend_Unreliable, nullptr);
 
 }
 
