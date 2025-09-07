@@ -4,6 +4,8 @@ typedef struct Vector2Int
 	int y;
 } Vector2Int;
 
+#define NULL_VECTOR {-999, -999}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,6 +41,13 @@ typedef struct SetIDDataPacket
 	char id;
 } SetIDDataPacket;
 
+typedef struct NicknameDataPacket
+{
+	enum PacketType packetType;
+	char id;
+	char nickname[8];
+} NicknameDataPacket;
+
 	//called when game scene is started
 	void StartServer();
 	void StartClient();
@@ -55,6 +64,8 @@ typedef struct SetIDDataPacket
 	int GetMyID();
 
 	void SetNickname(char* inNick);
+
+	int Vector2Int_IsValid(Vector2Int a);
 
 #ifdef __cplusplus
 }

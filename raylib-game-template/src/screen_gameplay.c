@@ -95,11 +95,15 @@ void DrawGameplayScreen(void)
     DrawTextEx(font, "GAMEPLAY SCREEN", pos, font.baseSize*3.0f, 4, MAROON);
     DrawText("PRESS ENTER or TAP to JUMP to ENDING SCREEN", 130, 220, 20, MAROON);
 
-    //draw clients
-    DrawRectangle(GetClientPosition(0).x, GetClientPosition(0).y, 20, 20, GREEN);
-    DrawRectangle(GetClientPosition(1).x, GetClientPosition(1).y, 20, 20, GREEN);
-    DrawRectangle(GetClientPosition(2).x, GetClientPosition(2).y, 20, 20, GREEN);
-    DrawRectangle(GetClientPosition(3).x, GetClientPosition(3).y, 20, 20, GREEN);
+    //draw clients (up to 8 players)
+    for (int i = 0; i < 8; i++)
+    {
+        Vector2Int itClientPos = GetClientPosition(i);
+        if (Vector2Int_IsValid(itClientPos) && i != GetMyID())
+        {
+            DrawRectangle(itClientPos.x, itClientPos.y, 20, 20, GREEN);
+        }
+    }
 
     //draw this player
     DrawRectangle(position.x, position.y, 20, 20, RED);

@@ -912,7 +912,7 @@ Vector2Int GetClientPosition(int clientID)
 	//make sure client id is valid
 	if (clientID > GetClientCount())
 	{
-		return { 0, 0 };
+		return NULL_VECTOR;
 	}
 
 	return clientPositions[clientID];
@@ -934,4 +934,21 @@ void SetNickname(char* inNick)
 	{
 		myNick[i] = inNick[i];
 	}
+}
+
+int Vector2Int_IsValid(Vector2Int a)
+{
+	Vector2Int nullVec = NULL_VECTOR;
+	if (a.x == nullVec.x && a.y == nullVec.y)
+	{
+		return false;
+	}
+	//i dont like this, but oh well
+	if (a.x == 0 && a.y == 0)
+	{
+		return false;
+	}
+
+	return true;
+	
 }
