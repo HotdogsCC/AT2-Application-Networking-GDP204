@@ -363,6 +363,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\networking.h" />
+    <ClInclude Include="..\..\..\src\network_interface.h" />
     <ClInclude Include="..\..\..\src\screens.h" />
   </ItemGroup>
   <ItemGroup>

@@ -20,7 +20,7 @@
 #include "raylib.h"
 #include "screens.h"    // NOTE: Declares global (extern) variables and screens functions
 
-#include "networking.h"
+#include "network_interface.h"
 
 #if defined(PLATFORM_WEB)
     #include <emscripten/emscripten.h>

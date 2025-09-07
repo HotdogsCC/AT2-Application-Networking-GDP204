@@ -29,7 +29,7 @@
 #include <signal.h>
 #endif
 
-#include "networking.h"
+#include "network_interface.h"
 #define POSITION_PACKET_SIZE sizeof(PositionDataPacket)
 
 /////////////////////////////////////////////////////////////////////////////

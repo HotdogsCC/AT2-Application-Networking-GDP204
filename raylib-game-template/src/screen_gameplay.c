@@ -25,7 +25,7 @@
 
 #include "raylib.h"
 #include "screens.h"
-#include "networking.h"
+#include "network_interface.h"
 
 //----------------------------------------------------------------------------------
 // Module Variables Definition (local)
