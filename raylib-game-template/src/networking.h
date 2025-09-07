@@ -33,6 +33,12 @@ typedef struct PositionDataPacket
 	int posY;
 } PositionDataPacket;
 
+typedef struct SetIDDataPacket
+{
+	enum PacketType packetType;
+	char id;
+} SetIDDataPacket;
+
 	//called when game scene is started
 	void StartServer();
 	void StartClient();
@@ -47,6 +53,8 @@ typedef struct PositionDataPacket
 	Vector2Int GetClientPosition(int clientID);
 	enum NetworkStatus GetNetworkStatus();
 	int GetMyID();
+
+	void SetNickname(char* inNick);
 
 #ifdef __cplusplus
 }

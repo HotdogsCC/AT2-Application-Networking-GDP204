@@ -15,6 +15,7 @@
 #include <queue>
 #include <map>
 #include <cctype>
+#include <iostream>
 
 #include <GameNetworkingSockets/steam/steamnetworkingsockets.h>
 #include <GameNetworkingSockets/steam/isteamnetworkingutils.h>
@@ -23,7 +24,7 @@
 #endif
 
 #ifdef _WIN32
-#include <windows.h> // Ug, for NukeProcess -- see below
+#include <windows.h> 
 #else
 #include <unistd.h>
 #include <signal.h>
@@ -31,6 +32,7 @@
 
 #include "networking.h"
 #define POSITION_PACKET_SIZE sizeof(PositionDataPacket)
+#define SET_ID_PACKET_SIZE sizeof(SetIDDataPacket)
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -113,6 +115,29 @@ PositionDataPacket DeserializePositionDataPacket(const char* inPacket)
 	return outPacket;
 }
 
+//takes in a datapacket for setting id's of clients and returns as 2 chars
+void SerializeSetIDDataPacket(const SetIDDataPacket& inPacket, char* outPacket)
+{
+	//set packet type
+	outPacket[0] = (char)inPacket.packetType;
+
+	//set ID
+	outPacket[1] = inPacket.id;
+}
+
+SetIDDataPacket DeserializeSetIDDataPacket(char* inPacket)
+{
+	SetIDDataPacket outPacket;
+
+	//set packet type
+	outPacket.packetType = (PacketType)inPacket[0];
+
+	//set ID
+	outPacket.id = inPacket[1];
+
+	return outPacket;
+}
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Common
@@ -121,7 +146,8 @@ PositionDataPacket DeserializePositionDataPacket(const char* inPacket)
 
 
 //network packet data
-int myID = -1;
+int myID = 0;
+char myNick[8];
 PositionDataPacket myPositionPacket;
 //sends data to the server regarding player ID and position
 void UpdatePacketPosition(int posX, int posY)
@@ -132,7 +158,10 @@ void UpdatePacketPosition(int posX, int posY)
 	myPositionPacket.posX = posX;
 	myPositionPacket.posY = posY;
 }
+
+//client information
 std::map<int, Vector2Int> clientPositions;
+std::map<int, char[8]> clientNicknames;
 
 
 //forward decl
@@ -365,11 +394,14 @@ private:
 			//SendStringToClient(pInfo->m_hConn, temp);
 
 			//send them their ID
-			std::string clientIDPacket = "ID";
-			char clientID = (char)(m_Clients.size() + 1);
-			clientIDPacket.append(&clientID);
-			//clientIDPacket.append('\0');
-			SendStringToClient(pInfo->m_hConn, clientIDPacket.c_str());
+			SetIDDataPacket setIdDP;
+			setIdDP.packetType = RECEIVED_SET_ID;
+			setIdDP.id = (char)(m_Clients.size() + 1);
+			char charPacket[2];
+			SerializeSetIDDataPacket(setIdDP, charPacket);
+			//SendStringToClient(pInfo->m_hConn, clientIDPacket.c_str());
+			m_pInterface->SendMessageToConnection(pInfo->m_hConn, charPacket, SET_ID_PACKET_SIZE,
+				k_nSteamNetworkingSend_Reliable, nullptr);
 
 			// Add them to the client list, using std::map wacky syntax
 			m_Clients.push_back(pInfo->m_hConn);
@@ -670,6 +702,7 @@ void UpdateServer()
 		for (auto& clientPos : clientPositions)
 		{
 			PositionDataPacket curClientPacket;
+			curClientPacket.packetType = RECEIVED_POSITION_DATA;
 			curClientPacket.id = clientPos.first;
 			curClientPacket.posX = clientPos.second.x;
 			curClientPacket.posY = clientPos.second.y;
@@ -708,15 +741,26 @@ void UpdateClient()
 			{
 				break;
 			}
-			if(message[0] == 'I' && message[1] == 'D')
+
+			//get the type
+			PacketType packetType = (PacketType)message[0];
+
+			switch (packetType)
 			{
-				//set the ID
-				myID = message[2];
-			}
-			else
-			{
-				PositionDataPacket incomingPacket = DeserializePositionDataPacket(message);
-				clientPositions[incomingPacket.id] = { incomingPacket.posX, incomingPacket.posY };
+			case RECEIVED_POSITION_DATA:
+				PositionDataPacket incomingPos = DeserializePositionDataPacket(message);
+				clientPositions[incomingPos.id] = { incomingPos.posX, incomingPos.posY };
+				break;
+			case RECEIVED_SET_ID:
+				SetIDDataPacket incomingID = DeserializeSetIDDataPacket(message);
+				myID = incomingID.id;
+				break;
+			case SEND_NICKNAME:
+				break;
+			case RECEIVED_NICKNAME:
+				break;
+			default:
+				break;
 			}
 
 			// Just echo anything we get from the server
@@ -882,4 +926,12 @@ enum NetworkStatus GetNetworkStatus()
 int GetMyID()
 {
 	return myID;
+}
+
+void SetNickname(char* inNick)
+{
+	for (int i = 0; i < 8; i++)
+	{
+		myNick[i] = inNick[i];
+	}
 }

@@ -34,13 +34,19 @@ static int framesCounter = 0;
 static int finishScreen = 0;
 
 static float buttonsDistance = 200;
-static int textFontSize = 20;
+static int textFontSize = 40;
+
+bool serverIsHovered = false;
+bool clientIsHovered = false;
+
+#define MAX_INPUT_CHARS 8
+char inputNickname[MAX_INPUT_CHARS + 1] = "Player\0";
+int letterCount = 6;
 
 Rectangle serverButtonRect;
 Rectangle clientButtonRect;
 
-bool serverIsHovered = false;
-bool clientIsHovered = false;
+
 
 //----------------------------------------------------------------------------------
 // Title Screen Functions Definition
@@ -77,12 +83,16 @@ void UpdateTitleScreen(void)
     {
         if (serverIsHovered)
         {
+            serverIsHovered = false;
+            SetNickname(inputNickname);
             StartServer();
             finishScreen = 2; //GAMEPLAY
             PlaySound(fxCoin);
         }
         if (clientIsHovered)
         {
+            clientIsHovered = false;
+            SetNickname(inputNickname);
             StartClient();
             finishScreen = 2; //GAMEPLAY
             PlaySound(fxCoin);
@@ -93,6 +103,28 @@ void UpdateTitleScreen(void)
     //is the mouse hovering over the button?
     serverIsHovered = CheckCollisionPointRec(GetMousePosition(), serverButtonRect);
     clientIsHovered = CheckCollisionPointRec(GetMousePosition(), clientButtonRect);
+
+    //read keys
+    int key = GetCharPressed();
+    while (key > 0)
+    {
+        // NOTE: Only allow keys in range [32..125]
+        if ((key >= 32) && (key <= 125) && (letterCount < MAX_INPUT_CHARS))
+        {
+            inputNickname[letterCount] = (char)key;
+            inputNickname[letterCount + 1] = '\0'; // Add null terminator at the end of the string
+            letterCount++;
+        }
+
+        key = GetCharPressed();
+    }
+
+    if (IsKeyPressed(KEY_BACKSPACE))
+    {
+        letterCount--;
+        if (letterCount < 0) letterCount = 0;
+        inputNickname[letterCount] = '\0';
+    }
 
 }
 
@@ -106,27 +138,16 @@ void DrawTitleScreen(void)
     DrawText("PRESS ENTER or TAP to JUMP to GAMEPLAY SCREEN", 120, 220, 20, DARKGREEN);
 
     //draws server and client buttons
-    if (serverIsHovered)
-    {
-        DrawRectangleRec(serverButtonRect, LIGHTGRAY);
-    }
-    else
-    {
-        DrawRectangleRec(serverButtonRect, GRAY);
-    }
-
-    if (clientIsHovered)
-    {
-        DrawRectangleRec(clientButtonRect, LIGHTGRAY);
-    }
-    else
-    {
-        DrawRectangleRec(clientButtonRect, GRAY);
-    }
-    
-    
+    if (serverIsHovered) DrawRectangleRec(serverButtonRect, LIGHTGRAY);
+    else DrawRectangleRec(serverButtonRect, GRAY);
     DrawText("Server", serverButtonRect.x, serverButtonRect.y, textFontSize, WHITE);
+
+    if (clientIsHovered) DrawRectangleRec(clientButtonRect, LIGHTGRAY);
+    else DrawRectangleRec(clientButtonRect, GRAY);
     DrawText("Client", clientButtonRect.x, clientButtonRect.y, textFontSize, WHITE);
+
+    //draw nickname
+    DrawText(inputNickname, GetScreenWidth() / 2 - 90, GetScreenHeight() - 100, 40, WHITE);
 }
 
 // Title Screen Unload logic
