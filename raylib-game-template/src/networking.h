@@ -23,7 +23,8 @@ enum PacketType {
 	RECEIVED_POSITION_DATA,
 	RECEIVED_SET_ID,
 	SEND_NICKNAME_TO_SERVER,
-	SEND_NICKNAMES_TO_CLIENT
+	SEND_NICKNAMES_TO_CLIENT,
+	PLAYER_DISCONNECTED
 
 };
 
@@ -35,11 +36,11 @@ typedef struct PositionDataPacket
 	int posY;
 } PositionDataPacket;
 
-typedef struct SetIDDataPacket
+typedef struct IDDataPacket
 {
 	enum PacketType packetType;
 	char id;
-} SetIDDataPacket;
+} IDDataPacket;
 
 typedef struct NicknameDataPacket
 {
@@ -59,6 +60,7 @@ typedef struct NicknameDataPacket
 	//called in screen_gameplay
 	void UpdatePacketPosition(int posX, int posY);
 	int GetClientCount();
+	char GetNextAvailableID();
 	Vector2Int GetClientPosition(int clientID);
 	enum NetworkStatus GetNetworkStatus();
 	int GetMyID();

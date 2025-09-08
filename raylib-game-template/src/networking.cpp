@@ -32,7 +32,7 @@
 
 #include "networking.h"
 #define POSITION_PACKET_SIZE sizeof(PositionDataPacket)
-#define SET_ID_PACKET_SIZE sizeof(SetIDDataPacket)
+#define ID_PACKET_SIZE sizeof(IDDataPacket)
 #define NICKNAME_PACKET_SIZE sizeof(NicknameDataPacket)
 
 /////////////////////////////////////////////////////////////////////////////
@@ -115,7 +115,7 @@ PositionDataPacket DeserializePositionDataPacket(const char* inPacket)
 }
 
 //takes in a datapacket for setting id's of clients and returns as 2 chars
-void SerializeSetIDDataPacket(const SetIDDataPacket& inPacket, char* outPacket)
+void SerializeIDDataPacket(const IDDataPacket& inPacket, char* outPacket)
 {
 	//set packet type
 	outPacket[0] = (char)inPacket.packetType;
@@ -124,9 +124,9 @@ void SerializeSetIDDataPacket(const SetIDDataPacket& inPacket, char* outPacket)
 	outPacket[1] = inPacket.id;
 }
 
-SetIDDataPacket DeserializeSetIDDataPacket(char* inPacket)
+IDDataPacket DeserializeIDDataPacket(char* inPacket)
 {
-	SetIDDataPacket outPacket;
+	IDDataPacket outPacket;
 
 	//set packet type
 	outPacket.packetType = (PacketType)inPacket[0];
@@ -208,6 +208,7 @@ void UpdatePacketPosition(int posX, int posY)
 }
 
 //client information
+std::map<HSteamNetConnection, int> clientIDs;
 std::map<int, Vector2Int> clientPositions;
 std::map<int, char[8]> clientNicknames;
 
@@ -231,6 +232,7 @@ HSteamNetConnection m_hConnection;
 HSteamListenSocket m_hListenSock;
 NetworkStatus networkStatus = INACTIVE;
 
+char nextAvailableID = 1;
 
 // kills the session
 static void NukeProcess(int rc)
@@ -373,14 +375,12 @@ private:
 				if (pInfo->m_info.m_eState == k_ESteamNetworkingConnectionState_ProblemDetectedLocally)
 				{
 					pszDebugLogAction = "problem detected locally";
-					sprintf(temp, "Alas, a client hath fallen into shadow.  (%s)", pInfo->m_info.m_szEndDebug);
 				}
 				else
 				{
 					// Note that here we could check the reason code to see if
 					// it was a "usual" connection or an "unusual" one.
-					pszDebugLogAction = "closed by peer";
-					sprintf(temp, "A client hath departed");
+					pszDebugLogAction = "closed by peery the platypuys";
 				}
 
 				// Spew something to our own log.  Note that because we put their nick
@@ -393,7 +393,28 @@ private:
 					pInfo->m_info.m_szEndDebug
 				);
 
+				
+				//null his position and name
+				int clientID = clientIDs[pInfo->m_hConn];
+				clientPositions[clientID] = { 0, 0 };
+				for (int i = 0; i < 8; i++)
+				{
+					clientNicknames[clientID][i] = ' ';
+				}
 				m_Clients.erase(itClient);
+
+				//let the other clients know about the player who left
+				for (auto client : m_Clients)
+				{
+					IDDataPacket discPacket;
+					discPacket.packetType = PLAYER_DISCONNECTED;
+					discPacket.id = clientID;
+					char serialDiscPacket[NICKNAME_PACKET_SIZE];
+					SerializeIDDataPacket(discPacket, serialDiscPacket);
+
+					m_pInterface->SendMessageToConnection(client, serialDiscPacket, NICKNAME_PACKET_SIZE,
+						k_nSteamNetworkingSend_Reliable, nullptr);
+				}
 			}
 			else
 			{
@@ -441,14 +462,18 @@ private:
 			//sprintf(temp, "Welcome to the server");
 			//SendStringToClient(pInfo->m_hConn, temp);
 
+			char thisClientID = nextAvailableID;
+			nextAvailableID++;
+			clientIDs[pInfo->m_hConn] = thisClientID;
+
 			//send them their ID
-			SetIDDataPacket setIdDP;
+			IDDataPacket setIdDP;
 			setIdDP.packetType = RECEIVED_SET_ID;
-			setIdDP.id = (char)(m_Clients.size() + 1);
+			setIdDP.id = thisClientID;
 			char charPacket[2];
-			SerializeSetIDDataPacket(setIdDP, charPacket);
+			SerializeIDDataPacket(setIdDP, charPacket);
 			//SendStringToClient(pInfo->m_hConn, clientIDPacket.c_str());
-			m_pInterface->SendMessageToConnection(pInfo->m_hConn, charPacket, SET_ID_PACKET_SIZE,
+			m_pInterface->SendMessageToConnection(pInfo->m_hConn, charPacket, ID_PACKET_SIZE,
 				k_nSteamNetworkingSend_Reliable, nullptr);
 
 			// Add them to the client list, using std::map wacky syntax
@@ -756,7 +781,7 @@ void UpdateServer()
 				clientPositions[incomingPos.id] = { incomingPos.posX, incomingPos.posY };
 				break;
 			case RECEIVED_SET_ID:
-				SetIDDataPacket incomingID = DeserializeSetIDDataPacket(message);
+				IDDataPacket incomingID = DeserializeIDDataPacket(message);
 				myID = incomingID.id;
 				break;
 			case SEND_NICKNAME_TO_SERVER:
@@ -865,7 +890,7 @@ void UpdateClient()
 				clientPositions[incomingPos.id] = { incomingPos.posX, incomingPos.posY };
 				break;
 			case RECEIVED_SET_ID:
-				SetIDDataPacket incomingID = DeserializeSetIDDataPacket(message);
+				IDDataPacket incomingID = DeserializeIDDataPacket(message);
 				myID = incomingID.id;
 
 				//send the server our nickname
@@ -891,6 +916,10 @@ void UpdateClient()
 				{
 					clientNicknames[incomingNick.id][i] = incomingNick.nickname[i];
 				}
+				break;
+			case PLAYER_DISCONNECTED:
+				IDDataPacket incomingPacket = DeserializeIDDataPacket(message);
+				clientPositions[incomingPacket.id] = { 0, 0 };
 				break;
 			default:
 				break;
@@ -1094,4 +1123,9 @@ int Vector2Int_IsValid(Vector2Int a)
 
 	return true;
 	
+}
+
+char GetNextAvailableID()
+{
+	return nextAvailableID;
 }

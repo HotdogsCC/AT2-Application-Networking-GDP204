@@ -116,8 +116,8 @@ void DrawGameplayScreen(void)
     DrawTextEx(font, "GAMEPLAY SCREEN", pos, font.baseSize*3.0f, 4, MAROON);
     DrawText("LEFT/RIGHT TO MOVE | UP TO JUMP | ESC TO CLOSE", 130, 220, 20, MAROON);
 
-    //draw clients (up to 8 players)
-    for (int i = 0; i < 8; i++)
+    //draw clients
+    for (char i = 0; i < 16; i++)
     {
         Vector2Int itClientPos = GetClientPosition(i);
         if (Vector2Int_IsValid(itClientPos) && i != GetMyID())
