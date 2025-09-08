@@ -26,6 +26,7 @@
 #include "raylib.h"
 #include "screens.h"
 #include "networking.h"
+#include "math.h"
 
 //----------------------------------------------------------------------------------
 // Module Variables Definition (local)
@@ -33,10 +34,15 @@
 static int framesCounter = 0;
 static int finishScreen = 0;
 
-//player position
-Vector2Int position = {0, 0};
-
+//player
+int playerSize = 20;
+Vector2 position = { 0, 0 };
+Vector2 velocity = { 0, 0 };
 int moveSpeed = 5;
+float gravity = 10;
+float jumpForce = 10;
+
+
 //----------------------------------------------------------------------------------
 // Gameplay Screen Functions Definition
 //----------------------------------------------------------------------------------
@@ -50,20 +56,13 @@ void InitGameplayScreen(void)
 
     position.x = GetScreenWidth() / 2;
     position.y = GetScreenHeight() / 2;
+
+    jumpForce = gravity;
 }
 
 // Gameplay Screen Update logic
 void UpdateGameplayScreen(void)
 {
-    // TODO: Update GAMEPLAY screen variables here!
-
-    // Press enter or tap to change to ENDING screen
-    if (IsKeyPressed(KEY_ENTER) || IsGestureDetected(GESTURE_TAP))
-    {
-        finishScreen = 1;
-        PlaySound(fxCoin);
-    }
-
     //take user input for player positions
     if (IsKeyDown(KEY_RIGHT))
     {
@@ -73,14 +72,36 @@ void UpdateGameplayScreen(void)
     {
         position.x -= moveSpeed;
     }
-    if (IsKeyDown(KEY_UP))
+    if (IsKeyPressed(KEY_UP))
     {
-        position.y -= moveSpeed;
+        velocity.y = -jumpForce;
     }
     if (IsKeyDown(KEY_DOWN))
     {
-        position.y += moveSpeed;
+       // position.y += moveSpeed;
     }
+
+    position.y += velocity.y;
+
+    if (position.y >= GetScreenHeight() - playerSize)
+    {
+        velocity.y = 0.0f;
+        position.y = GetScreenHeight() - playerSize;
+    }
+    else
+    {
+        velocity.y += GetFrameTime() * gravity;
+
+    }
+
+    if (position.y <= 0)
+    {
+        velocity.y = -velocity.y;
+        position.y += 10;
+    }
+
+    if (position.x <= 0) position.x = 0;
+    if (position.x >= GetScreenWidth() - playerSize) position.x = GetScreenWidth() - playerSize;
 
     UpdatePacketPosition(position.x, position.y);
 
@@ -93,7 +114,7 @@ void DrawGameplayScreen(void)
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), PURPLE);
     Vector2 pos = { 20, 10 };
     DrawTextEx(font, "GAMEPLAY SCREEN", pos, font.baseSize*3.0f, 4, MAROON);
-    DrawText("PRESS ENTER or TAP to JUMP to ENDING SCREEN", 130, 220, 20, MAROON);
+    DrawText("LEFT/RIGHT TO MOVE | UP TO JUMP | ESC TO CLOSE", 130, 220, 20, MAROON);
 
     //draw clients (up to 8 players)
     for (int i = 0; i < 8; i++)
@@ -101,7 +122,7 @@ void DrawGameplayScreen(void)
         Vector2Int itClientPos = GetClientPosition(i);
         if (Vector2Int_IsValid(itClientPos) && i != GetMyID())
         {
-            DrawRectangle(itClientPos.x, itClientPos.y, 20, 20, GREEN);
+            DrawRectangle(itClientPos.x, itClientPos.y, playerSize, playerSize, GREEN);
             const char* clientNick = GetClientNickname(i);
             char clientNickWithTerminator[9];
             for (int i = 0; i < 8; i++)
@@ -114,7 +135,7 @@ void DrawGameplayScreen(void)
     }
 
     //draw this player
-    DrawRectangle(position.x, position.y, 20, 20, RED);
+    DrawRectangle(position.x, position.y, playerSize, playerSize, RED);
     DrawText(GetNickname(), position.x, position.y - 20, 20, WHITE);
 
     

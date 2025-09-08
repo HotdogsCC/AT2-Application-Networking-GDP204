@@ -134,8 +134,7 @@ void DrawTitleScreen(void)
     // TODO: Draw TITLE screen here!
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), GREEN);
     const Vector2 pos = { 20, 10 };
-    DrawTextEx(font, "TITLE SCREEN", pos, font.baseSize*3.0f, 4, DARKGREEN);
-    DrawText("PRESS ENTER or TAP to JUMP to GAMEPLAY SCREEN", 120, 220, 20, DARKGREEN);
+    DrawTextEx(font, "CHARLIE CAMPBELL NETWORKING ASSESSMENT 2", pos, font.baseSize*3.0f, 4, DARKGREEN);
 
     //draws server and client buttons
     if (serverIsHovered) DrawRectangleRec(serverButtonRect, LIGHTGRAY);
