@@ -56,10 +56,17 @@ void CreateBullet(Vector2 inPos, bool inShouldTravelRight)
 	//otherwise, ask the server to make a bullet for us
 	else
 	{
-
+		//RequestBu
 	}
 
 	
+}
+
+void AddBulletToArray(int id, int posX, int posY)
+{
+	bullets[id] = new Bullet();
+	bullets[id]->position = { static_cast<float>(posX), static_cast<float>(posY) };
+	return;
 }
 
 Vector2 GetBulletPosition(int index)

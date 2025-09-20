@@ -26,6 +26,8 @@ enum PacketType {
 	RECEIVED_SET_ID,
 	SEND_NICKNAME_TO_SERVER,
 	SEND_NICKNAMES_TO_CLIENT,
+	REQUEST_BULLET_SPAWN,
+	BULLET_LOCATION,
 	PLAYER_DISCONNECTED
 
 };
@@ -51,6 +53,22 @@ typedef struct NicknameDataPacket
 	char nickname[8];
 } NicknameDataPacket;
 
+typedef struct BulletCreationDataPack
+{
+	enum PacketType packetType;
+	int posX;
+	int posY; 
+	char shouldTravelRight;
+} BulletCreationDataPack;
+
+typedef struct BulletDataPack
+{
+	enum PacketType packetType;
+	char id;
+	int posX;
+	int posY; 
+} BulletDataPack;
+
 	//called when game scene is started
 	void StartServer();
 	void StartClient();
@@ -71,6 +89,8 @@ typedef struct NicknameDataPacket
 	char* GetNickname();
 	void SetNickname(char* inNick);
 	char* GetClientNickname(int clientID);
+
+	void CreateBulletOnServer(int posX, int posY, char inShouldTravelRight);
 
 	int Vector2Int_IsValid(Vector2Int a);
 

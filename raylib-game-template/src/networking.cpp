@@ -1,6 +1,11 @@
 // Example client/server application using SteamNetworkingSockets based on Valve Corporation chat example
 
 #define _CRT_SECURE_NO_WARNINGS
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#define NOGDI
+#define NOSHOWWINDOW     // prevents Windows from declaring ShowCursor / CloseWindow
+#define NOUSER           // (if you don’t need user32 stuff)
 #include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -22,7 +27,7 @@
 #ifndef STEAMNETWORKINGSOCKETS_OPENSOURCE
 #include <GameNetworkingSockets/steam/steam_api.h>
 #endif
-
+#include "bullets.h"
 #ifdef _WIN32
 #include <windows.h> 
 #else
@@ -31,9 +36,12 @@
 #endif
 
 #include "networking.h"
+
 #define POSITION_PACKET_SIZE sizeof(PositionDataPacket)
 #define ID_PACKET_SIZE sizeof(IDDataPacket)
 #define NICKNAME_PACKET_SIZE sizeof(NicknameDataPacket)
+#define BULLET_CREATION_PACKET_SIZE sizeof(BulletCreationDataPack)
+#define BULLET_PACKET_SIZE sizeof(BulletDataPack)
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -182,6 +190,48 @@ NicknameDataPacket DeserializeNicknameDataPacket(char* inPacket)
 	{
 		outPacket.nickname[i] = inPacket[i+2];
 	}
+
+	return outPacket;
+}
+
+void SerializeBulletDataPacket(const BulletDataPack& inPacket, char* outPacket)
+{
+	//set packet type
+	outPacket[0] = (char)inPacket.packetType;
+
+	//set ID
+	outPacket[1] = inPacket.id;
+
+	char tempChars[4];
+
+	//set position x
+	SerializeInt(inPacket.posX, tempChars);
+	outPacket[2] = tempChars[0];
+	outPacket[3] = tempChars[1];
+	outPacket[4] = tempChars[2];
+	outPacket[5] = tempChars[3];
+
+	//set position y
+	SerializeInt(inPacket.posY, tempChars);
+	outPacket[6] = tempChars[0];
+	outPacket[7] = tempChars[1];
+	outPacket[8] = tempChars[2];
+	outPacket[9] = tempChars[3];
+}
+
+BulletDataPack DeserializeBulletDataPacket(char* inPacket)
+{
+	BulletDataPack outPacket;
+
+	//set packet type
+	outPacket.packetType = (PacketType)inPacket[0];
+
+	//set ID
+	outPacket.id = inPacket[1];
+
+	//set positiion
+	outPacket.posX = DeserializeInt(inPacket, 2);
+	outPacket.posY = DeserializeInt(inPacket, 6);
 
 	return outPacket;
 }
@@ -917,6 +967,9 @@ void UpdateClient()
 					clientNicknames[incomingNick.id][i] = incomingNick.nickname[i];
 				}
 				break;
+			case BULLET_LOCATION:
+				BulletDataPack incomingBullet = DeserializeBulletDataPacket(message);
+				AddBulletToArray(incomingBullet.id, incomingBullet.posX, incomingBullet.posY);
 			case PLAYER_DISCONNECTED:
 				IDDataPacket incomingPacket = DeserializeIDDataPacket(message);
 				clientPositions[incomingPacket.id] = { 0, 0 };
@@ -935,12 +988,6 @@ void UpdateClient()
 	}
 
 	m_pInterface->RunCallbacks();
-
-	std::string DebugMessage = "Client message";
-
-	// Send it to the server and let them parse it
-	//m_pInterface->SendMessageToConnection(m_hConnection, DebugMessage.c_str(),
-	//	(uint32)DebugMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
 
 	char serialPacket[POSITION_PACKET_SIZE];
 	SerializePositionDataPacket(myPositionPacket, serialPacket);
@@ -1139,4 +1186,9 @@ int IsServer()
 	}
 
 	return false;
+}
+
+void CreateBulletOnServer(int posX, int posY, bool inShouldTravelRight)
+{
+	
 }

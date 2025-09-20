@@ -66,7 +66,8 @@ void InitGameplayScreen(void)
 // Gameplay Screen Update logic
 void UpdateGameplayScreen(void)
 {
-    UpdateBullets(GetFrameTime());
+    if(IsServer) UpdateBullets(GetFrameTime());
+   
 
     //bullet input
     if (IsKeyPressed(KEY_SPACE))

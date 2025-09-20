@@ -14,6 +14,9 @@ extern "C" {
 
 	void CreateBullet(Vector2, bool);
 
+	//used by client
+	void AddBulletToArray(int id, int posX, int posY);
+
 	bool BulletIsValid(int index);
 
 	//returns the position of a given bullet index
