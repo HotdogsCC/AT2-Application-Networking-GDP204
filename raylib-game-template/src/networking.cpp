@@ -1,11 +1,13 @@
 // Example client/server application using SteamNetworkingSockets based on Valve Corporation chat example
 
+// prevents windows from redefining raylib functionality
 #define _CRT_SECURE_NO_WARNINGS
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #define NOGDI
-#define NOSHOWWINDOW     // prevents Windows from declaring ShowCursor / CloseWindow
-#define NOUSER           // (if you don’t need user32 stuff)
+#define NOSHOWWINDOW
+#define NOUSER
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -880,6 +882,27 @@ void UpdateServer()
 				k_nSteamNetworkingSend_Unreliable, nullptr);
 		}
 
+		//send bullet data
+		for (auto& clientPos : clientPositions)
+		{
+			for (int i = 0; i < BULLET_POOL_SIZE; i++)
+			{
+				BulletDataPack curBulletPacket;
+				curBulletPacket.packetType = BULLET_LOCATION;
+				curBulletPacket.id = i;
+				Vector2 bulPos = GetBulletPosition(i);
+				curBulletPacket.posX = static_cast<int>(bulPos.x);
+				curBulletPacket.posY = static_cast<int>(bulPos.y);
+
+				char serialBulletPacket[BULLET_PACKET_SIZE];
+				SerializeBulletDataPacket(curBulletPacket, serialBulletPacket);
+
+				m_pInterface->SendMessageToConnection(client, serialBulletPacket, BULLET_PACKET_SIZE,
+					k_nSteamNetworkingSend_Unreliable, nullptr);
+			}
+			
+		}
+
 		if (shouldUpdateNicknames)
 		{
 			//send nickname data
@@ -970,6 +993,7 @@ void UpdateClient()
 			case BULLET_LOCATION:
 				BulletDataPack incomingBullet = DeserializeBulletDataPacket(message);
 				AddBulletToArray(incomingBullet.id, incomingBullet.posX, incomingBullet.posY);
+				break;
 			case PLAYER_DISCONNECTED:
 				IDDataPacket incomingPacket = DeserializeIDDataPacket(message);
 				clientPositions[incomingPacket.id] = { 0, 0 };

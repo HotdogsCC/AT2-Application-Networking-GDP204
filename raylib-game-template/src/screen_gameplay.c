@@ -154,6 +154,7 @@ void DrawGameplayScreen(void)
     for (char i = 0; i < 16; i++)
     {
         Vector2Int itClientPos = GetClientPosition(i);
+
         //ignore if it is us
         if (Vector2Int_IsValid(itClientPos) && i != GetMyID())
         {

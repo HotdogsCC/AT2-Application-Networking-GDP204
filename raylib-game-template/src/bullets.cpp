@@ -64,7 +64,19 @@ void CreateBullet(Vector2 inPos, bool inShouldTravelRight)
 
 void AddBulletToArray(int id, int posX, int posY)
 {
-	bullets[id] = new Bullet();
+	//if it is null, delete
+	if (posX == -999 && posY == -999)
+	{
+		delete bullets[id];
+		bullets[id] = nullptr;
+		return;
+	}
+
+	if (bullets[id] == nullptr)
+	{
+		bullets[id] = new Bullet();
+	}
+
 	bullets[id]->position = { static_cast<float>(posX), static_cast<float>(posY) };
 	return;
 }
