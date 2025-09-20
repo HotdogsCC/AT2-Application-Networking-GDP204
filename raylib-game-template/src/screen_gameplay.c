@@ -27,6 +27,7 @@
 #include "screens.h"
 #include "networking.h"
 #include "math.h"
+#include "bullets.h"
 
 //----------------------------------------------------------------------------------
 // Module Variables Definition (local)
@@ -38,7 +39,7 @@ static int finishScreen = 0;
 int playerSize = 20;
 Vector2 position = { 0, 0 };
 Vector2 velocity = { 0, 0 };
-int moveSpeed = 5;
+int moveSpeed = 400;
 float gravity = 10;
 float jumpForce = 10;
 
@@ -58,31 +59,50 @@ void InitGameplayScreen(void)
     position.y = GetScreenHeight() / 2;
 
     jumpForce = gravity;
+
+
 }
 
 // Gameplay Screen Update logic
 void UpdateGameplayScreen(void)
 {
+    UpdateBullets(GetFrameTime());
+
+    //bullet input
+    if (IsKeyPressed(KEY_SPACE))
+    {
+        if (IsKeyDown(KEY_LEFT))
+        {
+            CreateBullet(position, false);
+        }
+        else
+        {
+            Vector2 spawnPos;
+            spawnPos.x = position.x + playerSize;
+            spawnPos.y = position.y;
+            CreateBullet(spawnPos, true);
+        }
+        
+    }
+
     //take user input for player positions
     if (IsKeyDown(KEY_RIGHT))
     {
-        position.x += moveSpeed;
+        position.x += moveSpeed * GetFrameTime();
     }
     if (IsKeyDown(KEY_LEFT))
     {
-        position.x -= moveSpeed;
+        position.x -= moveSpeed * GetFrameTime();
     }
     if (IsKeyPressed(KEY_UP))
     {
         velocity.y = -jumpForce;
     }
-    if (IsKeyDown(KEY_DOWN))
-    {
-       // position.y += moveSpeed;
-    }
 
+    //apply velocity
     position.y += velocity.y;
 
+    //ground logic
     if (position.y >= GetScreenHeight() - playerSize)
     {
         velocity.y = 0.0f;
@@ -94,15 +114,18 @@ void UpdateGameplayScreen(void)
 
     }
 
+    //rebounds off ceiling
     if (position.y <= 0)
     {
         velocity.y = -velocity.y;
         position.y += 10;
     }
 
+    //confine player within the width of the screen
     if (position.x <= 0) position.x = 0;
     if (position.x >= GetScreenWidth() - playerSize) position.x = GetScreenWidth() - playerSize;
 
+    //send our position to the server
     UpdatePacketPosition(position.x, position.y);
 
 }
@@ -110,19 +133,33 @@ void UpdateGameplayScreen(void)
 // Gameplay Screen Draw logic
 void DrawGameplayScreen(void)
 {
-    // TODO: Draw GAMEPLAY screen here!
+    //draw background
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), PURPLE);
     Vector2 pos = { 20, 10 };
     DrawTextEx(font, "GAMEPLAY SCREEN", pos, font.baseSize*3.0f, 4, MAROON);
     DrawText("LEFT/RIGHT TO MOVE | UP TO JUMP | ESC TO CLOSE", 130, 220, 20, MAROON);
 
+    //draw bullets
+    for (int i = 0; i < BULLET_POOL_SIZE; i++)
+    {
+        if (BulletIsValid(i))
+        {
+            Vector2 bulletPos = GetBulletPosition(i);
+            DrawRectangle(bulletPos.x, bulletPos.y, bulletWidth, bulletHeight, BLACK);
+        }
+    }
+
     //draw clients
     for (char i = 0; i < 16; i++)
     {
         Vector2Int itClientPos = GetClientPosition(i);
+        //ignore if it is us
         if (Vector2Int_IsValid(itClientPos) && i != GetMyID())
         {
+            //draw player box
             DrawRectangle(itClientPos.x, itClientPos.y, playerSize, playerSize, GREEN);
+
+            //draw player name
             const char* clientNick = GetClientNickname(i);
             char clientNickWithTerminator[9];
             for (int i = 0; i < 8; i++)

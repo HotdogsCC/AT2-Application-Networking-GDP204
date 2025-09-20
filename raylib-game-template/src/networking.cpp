@@ -1129,3 +1129,14 @@ char GetNextAvailableID()
 {
 	return nextAvailableID;
 }
+
+int IsServer()
+{
+	if (networkStatus == NetworkStatus::SERVER_ACTIVE
+		|| networkStatus == NetworkStatus::SERVER_STARTING)
+	{
+		return true;
+	}
+
+	return false;
+}

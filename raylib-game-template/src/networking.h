@@ -1,3 +1,5 @@
+#pragma once
+
 typedef struct Vector2Int
 {
 	int x;
@@ -64,6 +66,7 @@ typedef struct NicknameDataPacket
 	Vector2Int GetClientPosition(int clientID);
 	enum NetworkStatus GetNetworkStatus();
 	int GetMyID();
+	int IsServer();
 
 	char* GetNickname();
 	void SetNickname(char* inNick);
