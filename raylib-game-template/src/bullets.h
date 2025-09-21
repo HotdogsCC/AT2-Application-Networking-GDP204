@@ -16,8 +16,13 @@ extern "C" {
 
 	//used by client
 	void AddBulletToArray(int id, int posX, int posY);
+	void RemoveBulletFromArray(int id);
 
 	bool BulletIsValid(int index);
+	bool BulletJustDied(int index);
+
+	void ResetBulletDiedStatus(int index);
+
 
 	//returns the position of a given bullet index
 	Vector2 GetBulletPosition(int);

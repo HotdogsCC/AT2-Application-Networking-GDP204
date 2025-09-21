@@ -887,18 +887,37 @@ void UpdateServer()
 		{
 			for (int i = 0; i < BULLET_POOL_SIZE; i++)
 			{
-				BulletDataPack curBulletPacket;
-				curBulletPacket.packetType = BULLET_LOCATION;
-				curBulletPacket.id = i;
-				Vector2 bulPos = GetBulletPosition(i);
-				curBulletPacket.posX = static_cast<int>(bulPos.x);
-				curBulletPacket.posY = static_cast<int>(bulPos.y);
+				if (BulletIsValid(i))
+				{
+					BulletDataPack curBulletPacket;
+					curBulletPacket.packetType = BULLET_LOCATION;
+					curBulletPacket.id = i;
+					Vector2 bulPos = GetBulletPosition(i);
+					curBulletPacket.posX = static_cast<int>(bulPos.x);
+					curBulletPacket.posY = static_cast<int>(bulPos.y);
 
-				char serialBulletPacket[BULLET_PACKET_SIZE];
-				SerializeBulletDataPacket(curBulletPacket, serialBulletPacket);
+					char serialBulletPacket[BULLET_PACKET_SIZE];
+					SerializeBulletDataPacket(curBulletPacket, serialBulletPacket);
 
-				m_pInterface->SendMessageToConnection(client, serialBulletPacket, BULLET_PACKET_SIZE,
-					k_nSteamNetworkingSend_Unreliable, nullptr);
+					m_pInterface->SendMessageToConnection(client, serialBulletPacket, BULLET_PACKET_SIZE,
+						k_nSteamNetworkingSend_Unreliable, nullptr);
+				}
+
+				else if (BulletJustDied(i))
+				{
+					ResetBulletDiedStatus(i);
+					IDDataPacket curBulletDestPacket;
+					curBulletDestPacket.packetType = BULLET_DESTROYED;
+					curBulletDestPacket.id = i;
+
+					char serialBulletDestPacket[ID_PACKET_SIZE];
+					SerializeIDDataPacket(curBulletDestPacket, serialBulletDestPacket);
+
+					m_pInterface->SendMessageToConnection(client, serialBulletDestPacket, ID_PACKET_SIZE,
+						k_nSteamNetworkingSend_Reliable, nullptr);
+				}
+
+				
 			}
 			
 		}
@@ -993,6 +1012,10 @@ void UpdateClient()
 			case BULLET_LOCATION:
 				BulletDataPack incomingBullet = DeserializeBulletDataPacket(message);
 				AddBulletToArray(incomingBullet.id, incomingBullet.posX, incomingBullet.posY);
+				break;
+			case BULLET_DESTROYED:
+				IDDataPacket incomingDestBullet = DeserializeIDDataPacket(message);
+				RemoveBulletFromArray(incomingDestBullet.id);
 				break;
 			case PLAYER_DISCONNECTED:
 				IDDataPacket incomingPacket = DeserializeIDDataPacket(message);

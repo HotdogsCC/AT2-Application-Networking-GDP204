@@ -1,5 +1,6 @@
 #include "bullets.h"
 #include "networking.h"
+#include "vector"
 
 class Bullet
 {
@@ -18,6 +19,7 @@ Bullet::Bullet()
 }
 
 Bullet* bullets[BULLET_POOL_SIZE];
+bool bulletsToBeKilled[BULLET_POOL_SIZE]; //used as a queue for network events
 
 bool BulletIsValid(int index)
 {
@@ -28,11 +30,24 @@ bool BulletIsValid(int index)
 	return bullets[index]->position.x != -999 || bullets[index]->position.y != -999;
 }
 
+bool BulletJustDied(int index)
+{
+	if (index >= BULLET_POOL_SIZE) return false;
+
+	return bulletsToBeKilled[index];
+}
+
+void ResetBulletDiedStatus(int index)
+{
+	bulletsToBeKilled[index] = false;
+}
+
 void InitBullets()
 {
 	for (int i = 0; i < BULLET_POOL_SIZE; i++)
 	{
 		bullets[i] = nullptr;
+		bulletsToBeKilled[i] = false;
 	}
 }
 
@@ -81,6 +96,12 @@ void AddBulletToArray(int id, int posX, int posY)
 	return;
 }
 
+void RemoveBulletFromArray(int id)
+{
+	delete bullets[id];
+	bullets[id] = nullptr;
+}
+
 Vector2 GetBulletPosition(int index)
 {
 	if (!BulletIsValid(index))
@@ -104,6 +125,7 @@ void UpdateBullets(float deltaTime)
 			//kill the bullet if it goes out of bounds
 			if (bullets[i]->position.x <= 0 || bullets[i]->position.x >= GetScreenWidth() - bulletWidth)
 			{
+				bulletsToBeKilled[i] = true;
 				delete bullets[i];
 				bullets[i] = nullptr;
 			}
