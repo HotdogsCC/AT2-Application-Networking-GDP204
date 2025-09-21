@@ -4,16 +4,7 @@
     <ClCompile Include="..\..\..\src\raylib_game.c">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\screen_ending.c">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\screen_gameplay.c">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\screen_logo.c">
-      <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\screen_options.c">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\screen_title.c">

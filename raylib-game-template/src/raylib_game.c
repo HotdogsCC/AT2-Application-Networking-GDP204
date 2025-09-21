@@ -2,8 +2,8 @@
 *
 *   raylib game template
 *
-*   <Game title>
-*   <Game description>
+*   <networking assessment 2>
+*   <this was made for an aie institute assessment>
 *
 *   This game has been created using raylib (www.raylib.com)
 *   raylib is licensed under an unmodified zlib/libpng license (View raylib.h for details)
@@ -12,19 +12,9 @@
 *
 ********************************************************************************************/
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-//is this going to be a server or client instance?
-//#define IS_SERVER
-/////////////////////////////////////////////////////////////////////////////////////////////
-
 #include "raylib.h"
 #include "screens.h"    // NOTE: Declares global (extern) variables and screens functions
-
 #include "networking.h"
-
-#if defined(PLATFORM_WEB)
-    #include <emscripten/emscripten.h>
-#endif
 
 //----------------------------------------------------------------------------------
 // Shared Variables Definition (global)
@@ -78,16 +68,9 @@ int main(void)
     SetMusicVolume(music, 1.0f);
     PlayMusicStream(music);
 
-    // Setup and init first screen
-    //currentScreen = LOGO;
-    //InitLogoScreen();
-
     currentScreen = TITLE;
     InitTitleScreen();
 
-#if defined(PLATFORM_WEB)
-    emscripten_set_main_loop(UpdateDrawFrame, 60, 1);
-#else
     SetTargetFPS(60);       // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
     
@@ -99,7 +82,6 @@ int main(void)
 
         UpdateNetwork();
     }
-#endif
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
@@ -107,14 +89,12 @@ int main(void)
     
     switch (currentScreen)
     {
-        case LOGO: UnloadLogoScreen(); break;
         case TITLE: UnloadTitleScreen(); break;
-        case OPTIONS: UnloadOptionsScreen(); break;
         case GAMEPLAY: UnloadGameplayScreen(); break;
-        case ENDING: UnloadEndingScreen(); break;
         default: break;
     }
 
+    //shut down our network session cleanly
     CloseNetwork();
 
     // Unload global data loaded
@@ -139,22 +119,16 @@ static void ChangeToScreen(int screen)
     // Unload current screen
     switch (currentScreen)
     {
-        case LOGO: UnloadLogoScreen(); break;
         case TITLE: UnloadTitleScreen(); break;
-        case OPTIONS: UnloadOptionsScreen(); break;
         case GAMEPLAY: UnloadGameplayScreen(); break;
-        case ENDING: UnloadEndingScreen(); break;
         default: break;
     }
 
     // Init next screen
     switch (screen)
     {
-        case LOGO: InitLogoScreen(); break;
         case TITLE: InitTitleScreen(); break;
-        case OPTIONS: InitOptionsScreen(); break;
         case GAMEPLAY: InitGameplayScreen(); break;
-        case ENDING: InitEndingScreen(); break;
         default: break;
     }
 
@@ -187,22 +161,16 @@ static void UpdateTransition(void)
             // Unload current screen
             switch (transFromScreen)
             {
-                case LOGO: UnloadLogoScreen(); break;
                 case TITLE: UnloadTitleScreen(); break;
-                case OPTIONS: UnloadOptionsScreen(); break;
                 case GAMEPLAY: UnloadGameplayScreen(); break;
-                case ENDING: UnloadEndingScreen(); break;
                 default: break;
             }
 
             // Load next screen
             switch (transToScreen)
             {
-                case LOGO: InitLogoScreen(); break;
                 case TITLE: InitTitleScreen(); break;
-                case OPTIONS: InitOptionsScreen(); break;
                 case GAMEPLAY: InitGameplayScreen(); break;
-                case ENDING: InitEndingScreen(); break;
                 default: break;
             }
 
@@ -244,13 +212,6 @@ static void UpdateDrawFrame(void)
     {
         switch(currentScreen)
         {
-            case LOGO:
-            {
-                UpdateLogoScreen();
-
-                if (FinishLogoScreen()) TransitionToScreen(TITLE);
-
-            } break;
             case TITLE:
             {
                 UpdateTitleScreen();
@@ -259,26 +220,12 @@ static void UpdateDrawFrame(void)
                 else if (FinishTitleScreen() == 2) TransitionToScreen(GAMEPLAY);
 
             } break;
-            case OPTIONS:
-            {
-                UpdateOptionsScreen();
-
-                if (FinishOptionsScreen()) TransitionToScreen(TITLE);
-
-            } break;
             case GAMEPLAY:
             {
                 UpdateGameplayScreen();
 
                 if (FinishGameplayScreen() == 1) TransitionToScreen(ENDING);
                 //else if (FinishGameplayScreen() == 2) TransitionToScreen(TITLE);
-
-            } break;
-            case ENDING:
-            {
-                UpdateEndingScreen();
-
-                if (FinishEndingScreen() == 1) TransitionToScreen(TITLE);
 
             } break;
             default: break;
