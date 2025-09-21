@@ -930,45 +930,7 @@ void UpdateServer()
 				k_nSteamNetworkingSend_Unreliable, nullptr);
 		}
 
-		//send bullet data
-		for (auto& clientPos : clientPositions)
-		{
-			for (int i = 0; i < BULLET_POOL_SIZE; i++)
-			{
-				if (BulletIsValid(i))
-				{
-					BulletDataPack curBulletPacket;
-					curBulletPacket.packetType = BULLET_LOCATION;
-					curBulletPacket.id = i;
-					Vector2 bulPos = GetBulletPosition(i);
-					curBulletPacket.posX = static_cast<int>(bulPos.x);
-					curBulletPacket.posY = static_cast<int>(bulPos.y);
-
-					char serialBulletPacket[BULLET_PACKET_SIZE];
-					SerializeBulletDataPacket(curBulletPacket, serialBulletPacket);
-
-					m_pInterface->SendMessageToConnection(client, serialBulletPacket, BULLET_PACKET_SIZE,
-						k_nSteamNetworkingSend_Unreliable, nullptr);
-				}
-
-				else if (BulletJustDied(i))
-				{
-					ResetBulletDiedStatus(i);
-					IDDataPacket curBulletDestPacket;
-					curBulletDestPacket.packetType = BULLET_DESTROYED;
-					curBulletDestPacket.id = i;
-
-					char serialBulletDestPacket[ID_PACKET_SIZE];
-					SerializeIDDataPacket(curBulletDestPacket, serialBulletDestPacket);
-
-					m_pInterface->SendMessageToConnection(client, serialBulletDestPacket, ID_PACKET_SIZE,
-						k_nSteamNetworkingSend_Reliable, nullptr);
-				}
-
-				
-			}
-			
-		}
+		
 
 		if (shouldUpdateNicknames)
 		{
@@ -993,6 +955,50 @@ void UpdateServer()
 		}
 		
 		
+	}
+
+	//send bullet data
+	for (int i = 0; i < BULLET_POOL_SIZE; i++)
+	{
+		if (BulletIsValid(i))
+		{
+			BulletDataPack curBulletPacket;
+			curBulletPacket.packetType = BULLET_LOCATION;
+			curBulletPacket.id = i;
+			Vector2 bulPos = GetBulletPosition(i);
+			curBulletPacket.posX = static_cast<int>(bulPos.x);
+			curBulletPacket.posY = static_cast<int>(bulPos.y);
+
+			char serialBulletPacket[BULLET_PACKET_SIZE];
+			SerializeBulletDataPacket(curBulletPacket, serialBulletPacket);
+
+			for (auto client : m_Clients)
+			{
+				m_pInterface->SendMessageToConnection(client, serialBulletPacket, BULLET_PACKET_SIZE,
+					k_nSteamNetworkingSend_Unreliable, nullptr);
+			}
+
+			
+		}
+
+		else if (BulletJustDied(i))
+		{
+			ResetBulletDiedStatus(i);
+			IDDataPacket curBulletDestPacket;
+			curBulletDestPacket.packetType = BULLET_DESTROYED;
+			curBulletDestPacket.id = i;
+
+			char serialBulletDestPacket[ID_PACKET_SIZE];
+			SerializeIDDataPacket(curBulletDestPacket, serialBulletDestPacket);
+
+			for (auto client : m_Clients)
+			{
+				m_pInterface->SendMessageToConnection(client, serialBulletDestPacket, ID_PACKET_SIZE,
+					k_nSteamNetworkingSend_Reliable, nullptr);
+			}
+		}
+
+
 	}
 	
 
