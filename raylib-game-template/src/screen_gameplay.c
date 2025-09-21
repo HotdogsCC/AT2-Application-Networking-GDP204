@@ -43,6 +43,8 @@ int moveSpeed = 400;
 float gravity = 10;
 float jumpForce = 10;
 
+Sound splat = { 0 };
+
 
 //----------------------------------------------------------------------------------
 // Gameplay Screen Functions Definition
@@ -60,6 +62,8 @@ void InitGameplayScreen(void)
 
     jumpForce = gravity;
 
+    splat = LoadSound("resources/splat.mp3");
+
 
 }
 
@@ -75,14 +79,14 @@ void UpdateGameplayScreen(void)
         if (IsKeyDown(KEY_LEFT))
         {
             Vector2 spawnPos;
-            spawnPos.x = position.x - PLAYER_CHARACTER_SIZE;
+            spawnPos.x = position.x - PLAYER_CHARACTER_SIZE - 5;
             spawnPos.y = position.y;
             CreateBullet(spawnPos, false);
         }
         else
         {
             Vector2 spawnPos;
-            spawnPos.x = position.x + PLAYER_CHARACTER_SIZE;
+            spawnPos.x = position.x + PLAYER_CHARACTER_SIZE + 25;
             spawnPos.y = position.y;
             CreateBullet(spawnPos, true);
         }
@@ -188,6 +192,7 @@ void DrawGameplayScreen(void)
 void UnloadGameplayScreen(void)
 {
     // TODO: Unload GAMEPLAY screen variables here!
+    UnloadSound(splat);
 }
 
 // Gameplay Screen should finish?

@@ -163,6 +163,8 @@ void UpdateBullets(float deltaTime)
 							delete bullets[i];
 							bullets[i] = nullptr;
 
+							PlaySound(splat);
+
 							break;
 						}
 

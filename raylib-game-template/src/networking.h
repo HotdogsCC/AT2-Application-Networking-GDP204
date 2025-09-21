@@ -54,21 +54,21 @@ typedef struct NicknameDataPacket
 	char nickname[8];
 } NicknameDataPacket;
 
-typedef struct BulletCreationDataPack
+typedef struct BulletCreationDataPacket
 {
 	enum PacketType packetType;
 	int posX;
 	int posY; 
 	char shouldTravelRight;
-} BulletCreationDataPack;
+} BulletCreationDataPacket;
 
-typedef struct BulletDataPack
+typedef struct BulletDataPacket
 {
 	enum PacketType packetType;
 	char id;
 	int posX;
 	int posY; 
-} BulletDataPack;
+} BulletDataPacket;
 
 	//called when game scene is started
 	void StartServer();

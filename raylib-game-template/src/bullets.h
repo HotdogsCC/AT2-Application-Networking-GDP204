@@ -7,6 +7,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+	extern Sound splat;
+
 	const int bulletWidth = 10;
 	const int bulletHeight = 5;
 	const float bulletSpeed = 600.0f;

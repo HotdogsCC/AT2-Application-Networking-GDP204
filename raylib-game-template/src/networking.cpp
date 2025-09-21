@@ -42,8 +42,8 @@
 #define POSITION_PACKET_SIZE sizeof(PositionDataPacket)
 #define ID_PACKET_SIZE sizeof(IDDataPacket)
 #define NICKNAME_PACKET_SIZE sizeof(NicknameDataPacket)
-#define BULLET_CREATION_PACKET_SIZE sizeof(BulletCreationDataPack)
-#define BULLET_PACKET_SIZE sizeof(BulletDataPack)
+#define BULLET_CREATION_PACKET_SIZE sizeof(BulletCreationDataPacket)
+#define BULLET_PACKET_SIZE sizeof(BulletDataPacket)
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -196,7 +196,7 @@ NicknameDataPacket DeserializeNicknameDataPacket(char* inPacket)
 	return outPacket;
 }
 
-void SerializeBulletCreateDataPacket(const BulletCreationDataPack& inPacket, char* outPacket)
+void SerializeBulletCreateDataPacket(const BulletCreationDataPacket& inPacket, char* outPacket)
 {
 	//set packet type
 	outPacket[0] = (char)inPacket.packetType;
@@ -221,9 +221,9 @@ void SerializeBulletCreateDataPacket(const BulletCreationDataPack& inPacket, cha
 	outPacket[9] = inPacket.shouldTravelRight;
 }
 
-BulletCreationDataPack DeserializeBulletCreateDataPacket(char* inPacket)
+BulletCreationDataPacket DeserializeBulletCreateDataPacket(char* inPacket)
 {
-	BulletCreationDataPack outPacket;
+	BulletCreationDataPacket outPacket;
 
 	//set packet type
 	outPacket.packetType = (PacketType)inPacket[0];
@@ -237,7 +237,7 @@ BulletCreationDataPack DeserializeBulletCreateDataPacket(char* inPacket)
 	return outPacket;
 }
 
-void SerializeBulletDataPacket(const BulletDataPack& inPacket, char* outPacket)
+void SerializeBulletDataPacket(const BulletDataPacket& inPacket, char* outPacket)
 {
 	//set packet type
 	outPacket[0] = (char)inPacket.packetType;
@@ -262,9 +262,9 @@ void SerializeBulletDataPacket(const BulletDataPack& inPacket, char* outPacket)
 	outPacket[9] = tempChars[3];
 }
 
-BulletDataPack DeserializeBulletDataPacket(char* inPacket)
+BulletDataPacket DeserializeBulletDataPacket(char* inPacket)
 {
-	BulletDataPack outPacket;
+	BulletDataPacket outPacket;
 
 	//set packet type
 	outPacket.packetType = (PacketType)inPacket[0];
@@ -890,7 +890,7 @@ void UpdateServer()
 			case SEND_NICKNAMES_TO_CLIENT:
 				break;
 			case REQUEST_BULLET_SPAWN:
-				BulletCreationDataPack incomingRequestBulletPacket = DeserializeBulletCreateDataPacket(message);
+				BulletCreationDataPacket incomingRequestBulletPacket = DeserializeBulletCreateDataPacket(message);
 				thisBulletPos = { static_cast<float>(incomingRequestBulletPacket.posX), static_cast<float>(incomingRequestBulletPacket.posY) };
 				CreateBullet(thisBulletPos, incomingRequestBulletPacket.shouldTravelRight);
 				break;
@@ -962,7 +962,7 @@ void UpdateServer()
 	{
 		if (BulletIsValid(i))
 		{
-			BulletDataPack curBulletPacket;
+			BulletDataPacket curBulletPacket;
 			curBulletPacket.packetType = BULLET_LOCATION;
 			curBulletPacket.id = i;
 			Vector2 bulPos = GetBulletPosition(i);
@@ -1064,7 +1064,7 @@ void UpdateClient()
 				}
 				break;
 			case BULLET_LOCATION:
-				BulletDataPack incomingBullet = DeserializeBulletDataPacket(message);
+				BulletDataPacket incomingBullet = DeserializeBulletDataPacket(message);
 				AddBulletToArray(incomingBullet.id, incomingBullet.posX, incomingBullet.posY);
 				break;
 			case BULLET_DESTROYED:
@@ -1291,7 +1291,7 @@ int IsServer()
 
 void CreateBulletOnServer(int posX, int posY, char inShouldTravelRight)
 {
-	BulletCreationDataPack myBulletPacket;
+	BulletCreationDataPacket myBulletPacket;
 	myBulletPacket.packetType = REQUEST_BULLET_SPAWN;
 	myBulletPacket.posX = posX;
 	myBulletPacket.posY = posY;
