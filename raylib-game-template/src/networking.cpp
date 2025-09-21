@@ -29,7 +29,7 @@
 #ifndef STEAMNETWORKINGSOCKETS_OPENSOURCE
 #include <GameNetworkingSockets/steam/steam_api.h>
 #endif
-#include "bullets.h"
+
 #ifdef _WIN32
 #include <windows.h> 
 #else
@@ -37,8 +37,10 @@
 #include <signal.h>
 #endif
 
+#include "bullets.h"
 #include "networking.h"
 
+//the sizes of data packets
 #define POSITION_PACKET_SIZE sizeof(PositionDataPacket)
 #define ID_PACKET_SIZE sizeof(IDDataPacket)
 #define NICKNAME_PACKET_SIZE sizeof(NicknameDataPacket)
@@ -46,7 +48,7 @@
 
 /////////////////////////////////////////////////////////////////////////////
 //
-// helper functions
+// serialisers
 //
 /////////////////////////////////////////////////////////////////////////////
 
@@ -104,6 +106,7 @@ void SerializePositionDataPacket(const PositionDataPacket& inPacket, char* outPa
 
 }
 
+//takes in a collection of chars and converts it into a positional data packet
 PositionDataPacket DeserializePositionDataPacket(const char* inPacket)
 {
 	PositionDataPacket outPacket;
@@ -133,6 +136,7 @@ void SerializeIDDataPacket(const IDDataPacket& inPacket, char* outPacket)
 	outPacket[1] = inPacket.id;
 }
 
+//takes in a series of chars and returns an ID data packet
 IDDataPacket DeserializeIDDataPacket(char* inPacket)
 {
 	IDDataPacket outPacket;
@@ -146,6 +150,7 @@ IDDataPacket DeserializeIDDataPacket(char* inPacket)
 	return outPacket;
 }
 
+//takes in a nickname data packet and returns a collection of chars for network transmission
 void SerializeNicknameDataPacket(const NicknameDataPacket& inPacket, char* outPacket)
 {
 	//set packet type
@@ -176,6 +181,7 @@ void SerializeNicknameDataPacket(const NicknameDataPacket& inPacket, char* outPa
 	}
 }
 
+//returns a nickname data packet from a series of chars
 NicknameDataPacket DeserializeNicknameDataPacket(char* inPacket)
 {
 	NicknameDataPacket outPacket;
@@ -195,6 +201,7 @@ NicknameDataPacket DeserializeNicknameDataPacket(char* inPacket)
 	return outPacket;
 }
 
+//takes in a bullet creation data packet and returns a collection of chars for network transmission
 void SerializeBulletCreateDataPacket(const BulletCreationDataPacket& inPacket, char* outPacket)
 {
 	//set packet type
@@ -220,6 +227,7 @@ void SerializeBulletCreateDataPacket(const BulletCreationDataPacket& inPacket, c
 	outPacket[9] = inPacket.shouldTravelRight;
 }
 
+//returns a bullet creation data packet given a collection of chars
 BulletCreationDataPacket DeserializeBulletCreateDataPacket(char* inPacket)
 {
 	BulletCreationDataPacket outPacket;
@@ -236,18 +244,15 @@ BulletCreationDataPacket DeserializeBulletCreateDataPacket(char* inPacket)
 	return outPacket;
 }
 
-/////////////////////////////////////////////////////////////////////////////
-//
-// Common
-//
-/////////////////////////////////////////////////////////////////////////////
 
-
-//network packet data
+//the id given to this client (set by server)
 int myID = 0;
+
+//the nickname of this session
 char myNick[9];
-PositionDataPacket myPositionPacket;
+
 //sends data to the server regarding player ID and position
+PositionDataPacket myPositionPacket;
 void UpdatePacketPosition(int posX, int posY)
 {
 	myPositionPacket.id = myID; //because of data conversion, this will break at 255
@@ -361,6 +366,7 @@ static inline void rtrim(std::string& s) {
 class NetworkServer
 {
 public:
+	//starts up the server at the beginning of the application
 	void Run(uint16 nPort)
 	{
 		// Select instance to use.  For now we'll always use the default.
@@ -385,16 +391,19 @@ public:
 
 	}
 private:
+	//whenever the connection status changes
 	static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
 		s_pCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
 	}
 public:
+	//sends a character array to a specific client
 	void SendStringToClient(HSteamNetConnection conn, const char* str)
 	{
 		m_pInterface->SendMessageToConnection(conn, str, (uint32)strlen(str), k_nSteamNetworkingSend_Reliable, nullptr);
 	}
 private:
+	//whenever the connection statys changes
 	void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
 		char temp[1024];
@@ -428,14 +437,10 @@ private:
 				}
 				else
 				{
-					// Note that here we could check the reason code to see if
-					// it was a "usual" connection or an "unusual" one.
-					pszDebugLogAction = "closed by peery the platypuys";
+					pszDebugLogAction = "problem not detected locally";
 				}
 
-				// Spew something to our own log.  Note that because we put their nick
-				// as the connection description, it will show up, along with their
-				// transport-specific data (e.g. their IP address)
+				// log the issue
 				Printf("Connection %s %s, reason %d: %s\n",
 					pInfo->m_info.m_szConnectionDescription,
 					pszDebugLogAction,
@@ -443,7 +448,6 @@ private:
 					pInfo->m_info.m_szEndDebug
 				);
 
-				
 				//null his position and name
 				int clientID = clientIDs[pInfo->m_hConn];
 				clientPositions[clientID] = { 0, 0 };
@@ -471,16 +475,12 @@ private:
 				assert(pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connecting);
 			}
 
-			// Clean up the connection.  This is important!
-			// The connection is "closed" in the network sense, but
-			// it has not been destroyed.  We must close it on our end, too
-			// to finish up.  The reason information do not matter in this case,
-			// and we cannot linger because it's already closed on the other end,
-			// so we just pass 0's.
+			// Clean up the connection.
 			m_pInterface->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
 			break;
 		}
 
+		//runs when a player joins
 		case k_ESteamNetworkingConnectionState_Connecting:
 		{
 			// This must be a new connection
@@ -508,36 +508,30 @@ private:
 				break;
 			}
 
-			// Send them a welcome message
-			//sprintf(temp, "Welcome to the server");
-			//SendStringToClient(pInfo->m_hConn, temp);
-
+			//get an ID for this connected client to use
 			char thisClientID = nextAvailableID;
 			nextAvailableID++;
 			clientIDs[pInfo->m_hConn] = thisClientID;
 
-			//send them their ID
+			//build the data packet with their ID
 			IDDataPacket setIdDP;
 			setIdDP.packetType = RECEIVED_SET_ID;
 			setIdDP.id = thisClientID;
 			char charPacket[2];
 			SerializeIDDataPacket(setIdDP, charPacket);
-			//SendStringToClient(pInfo->m_hConn, clientIDPacket.c_str());
+
+			//send the client their ID
 			m_pInterface->SendMessageToConnection(pInfo->m_hConn, charPacket, ID_PACKET_SIZE,
 				k_nSteamNetworkingSend_Reliable, nullptr);
 
 			// Add them to the client list, using std::map wacky syntax
 			m_Clients.push_back(pInfo->m_hConn);
+
+			Printf("Player connected successfully");
 			break;
 		}
 
-		case k_ESteamNetworkingConnectionState_Connected:
-			// We will get a callback immediately after accepting the connection.
-			// Since we are the server, we can ignore this, it's not news to us.
-			break;
-
 		default:
-			// Silences -Wswitch
 			break;
 		}
 	}
@@ -552,6 +546,7 @@ private:
 class NetworkClient
 {
 public:
+	//starts up the client
 	void Run(const SteamNetworkingIPAddr& serverAddr)
 	{
 		// Select instance to use.  For now we'll always use the default.
@@ -570,11 +565,13 @@ public:
 		networkStatus = CLIENT_ACTIVE;
 	}
 private:
+	//whenever our connection status changes
 	static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
 		s_pClientCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
 	}
 
+	//whenever our connection status changes
 	void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)
 	{
 		assert(pInfo->m_hConn == m_hConnection || m_hConnection == k_HSteamNetConnection_Invalid);
@@ -582,60 +579,42 @@ private:
 		// What's the state of the connection?
 		switch (pInfo->m_info.m_eState)
 		{
-		case k_ESteamNetworkingConnectionState_None:
-			// NOTE: We will get callbacks here when we destroy connections.  You can ignore these.
-			break;
-
 		case k_ESteamNetworkingConnectionState_ClosedByPeer:
 		case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
 		{
 			// Print an appropriate message
 			if (pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connecting)
 			{
-				// Note: we could distinguish between a timeout, a rejected connection,
-				// or some other transport problem.
-				Printf("We sought the remote host, yet our efforts were met with defeat.  (%s)", pInfo->m_info.m_szEndDebug);
+				Printf("Stuck trying to connect: (%s)", pInfo->m_info.m_szEndDebug);
 			}
 			else if (pInfo->m_info.m_eState == k_ESteamNetworkingConnectionState_ProblemDetectedLocally)
 			{
-				Printf("Alas, troubles beset us; we have lost contact with the host.  (%s)", pInfo->m_info.m_szEndDebug);
+				Printf("Lost connection to host: (%s)", pInfo->m_info.m_szEndDebug);
 			}
 			else
 			{
-				// NOTE: We could check the reason code for a normal disconnection
-				Printf("The host hath bidden us farewell.  (%s)", pInfo->m_info.m_szEndDebug);
+				Printf("Disconnected from host: (%s)", pInfo->m_info.m_szEndDebug);
 			}
 
-			// Clean up the connection.  This is important!
-			// The connection is "closed" in the network sense, but
-			// it has not been destroyed.  We must close it on our end, too
-			// to finish up.  The reason information do not matter in this case,
-			// and we cannot linger because it's already closed on the other end,
-			// so we just pass 0's.
+			// Clean up the connection.
 			m_pInterface->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
 			m_hConnection = k_HSteamNetConnection_Invalid;
 			break;
 		}
 
-		case k_ESteamNetworkingConnectionState_Connecting:
-			// We will get this callback when we start connecting.
-			// We can ignore this.
-			break;
-
 		case k_ESteamNetworkingConnectionState_Connected:
 			Printf("Connected to server OK");
-
-			
 			break;
 
 		default:
-			// Silences -Wswitch
 			break;
 		}
 	}
 };
 
+//default port for connecting to
 const uint16 DEFAULT_SERVER_PORT = 27020;
+
 
 void PrintUsageAndExit(int rc = 1)
 {
@@ -650,6 +629,7 @@ void PrintUsageAndExit(int rc = 1)
 	exit(rc);
 }
 
+//takes in a char array of arguments and starts the networked session
 int startSessionFromArgument(int argc, const char* argv[])
 {
 	bool bServer = false;
@@ -717,12 +697,7 @@ int startSessionFromArgument(int argc, const char* argv[])
 	if (!SteamDatagramClient_Init(errMsg))
 		FatalError("SteamDatagramClient_Init failed.  %s", errMsg);
 
-	// Disable authentication when running with Steam, for this
-	// example, since we're not a real app.
-	//
-	// Authentication is disabled automatically in the open-source
-	// version since we don't have a trusted third party to issue
-	// certs.
+	// Disable authentication when running with Steam
 	SteamNetworkingUtils()->SetGlobalConfigValueInt32(k_ESteamNetworkingConfig_IP_AllowWithoutAuth, 1);
 #endif
 
@@ -1036,17 +1011,13 @@ void UpdateClient()
 				break;
 			}
 
-			// Just echo anything we get from the server
-			//fwrite(pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout);
-			//fputc('\n', stdout);
-
-			// We don't need this anymore.
 			pIncomingMsg->Release();
 		}
 	}
 
 	m_pInterface->RunCallbacks();
 
+	//send the server my position
 	char serialPacket[POSITION_PACKET_SIZE];
 	SerializePositionDataPacket(myPositionPacket, serialPacket);
 
@@ -1062,14 +1033,7 @@ void CloseServer()
 	Printf("Closing connections...\n");
 	for (auto it : m_Clients)
 	{
-		// Send them one more goodbye message.  Note that we also have the
-		// connection close reason as a place to send final data.  However,
-		// that's usually best left for more diagnostic/debug text not actual
-		// protocol strings.
-		//SendStringToClient(it, "Server is shutting down.  Goodbye.");
-
-		// Close the connection.  We use "linger mode" to ask SteamNetworkingSockets
-		// to flush this out and close gracefully.
+		//shut down each client
 		m_pInterface->CloseConnection(it, 0, "Server Shutdown", true);
 	}
 	m_Clients.clear();
@@ -1084,11 +1048,7 @@ void CloseServer()
 	// Shutdown
 	//
 
-	// Give connections time to finish up.  This is an application layer protocol
-	// here, it's not TCP.  Note that if you have an application and you need to be
-	// more sure about cleanup, you won't be able to do this.  You will need to send
-	// a message and then either wait for the peer to close the connection, or
-	// you can pool the connection to see if any reliable data is pending.
+	// wait for half a second
 	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	delete myServer;
 
@@ -1098,9 +1058,7 @@ void CloseServer()
 	SteamDatagramClient_Kill();
 #endif
 
-	// Ug, why is there no simple solution for portable, non-blocking console user input?
-	// Just nuke the process
-	//LocalUserInput_Kill();
+	// kill the process
 	NukeProcess(0);
 }
 
@@ -1108,20 +1066,13 @@ void CloseClient()
 {
 	networkStatus = INACTIVE;
 	// Close the connection gracefully.
-	// We use linger mode to ask for any remaining reliable data
-	// to be flushed out.  But remember this is an application
-	// protocol on UDP.  See ShutdownSteamDatagramConnectionSockets
 	m_pInterface->CloseConnection(m_hConnection, 0, "Goodbye", true);
 
 	//
-// Shutdown
-//
+	// Shutdown
+	//
 
-// Give connections time to finish up.  This is an application layer protocol
-// here, it's not TCP.  Note that if you have an application and you need to be
-// more sure about cleanup, you won't be able to do this.  You will need to send
-// a message and then either wait for the peer to close the connection, or
-// you can pool the connection to see if any reliable data is pending.
+	// wait for half a second
 	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
 	delete myClient;
@@ -1132,12 +1083,11 @@ void CloseClient()
 	SteamDatagramClient_Kill();
 #endif
 
-	// Ug, why is there no simple solution for portable, non-blocking console user input?
-	// Just nuke the process
-	//LocalUserInput_Kill();
+	// kill the session
 	NukeProcess(0);
 }
 
+//runs every frame
 void UpdateNetwork()
 {
 	switch (networkStatus)
@@ -1153,6 +1103,7 @@ void UpdateNetwork()
 	}
 }
 
+//cleanly shuts down this network session
 void CloseNetwork()
 {
 	switch (networkStatus)
