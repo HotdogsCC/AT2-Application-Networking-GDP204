@@ -141,7 +141,7 @@ void DrawGameplayScreen(void)
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), PURPLE);
     Vector2 pos = { 20, 10 };
     DrawTextEx(font, "GAMEPLAY SCREEN", pos, font.baseSize*3.0f, 4, MAROON);
-    DrawText("LEFT/RIGHT TO MOVE | UP TO JUMP | ESC TO CLOSE", 130, 220, 20, MAROON);
+    DrawText("LEFT/RIGHT TO MOVE | UP TO JUMP | SPACE TO SHOOT | ESC TO CLOSE", 10, 220, 20, MAROON);
 
     //draw bullets
     for (int i = 0; i < BULLET_POOL_SIZE; i++)

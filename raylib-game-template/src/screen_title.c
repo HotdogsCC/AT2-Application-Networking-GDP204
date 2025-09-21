@@ -147,6 +147,7 @@ void DrawTitleScreen(void)
 
     //draw nickname
     DrawText(inputNickname, GetScreenWidth() / 2 - 90, GetScreenHeight() - 100, 40, WHITE);
+    DrawText("Enter Your Nickname", GetScreenWidth() / 2 - 90, GetScreenHeight() - 50, 20, DARKGREEN);
 }
 
 // Title Screen Unload logic
