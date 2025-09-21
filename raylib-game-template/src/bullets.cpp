@@ -71,7 +71,7 @@ void CreateBullet(Vector2 inPos, bool inShouldTravelRight)
 	//otherwise, ask the server to make a bullet for us
 	else
 	{
-		//RequestBu
+		CreateBulletOnServer(static_cast<int>(inPos.x), static_cast<int>(inPos.y), inShouldTravelRight);
 	}
 
 	

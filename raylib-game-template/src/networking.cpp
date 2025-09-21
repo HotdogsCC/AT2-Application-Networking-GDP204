@@ -196,6 +196,47 @@ NicknameDataPacket DeserializeNicknameDataPacket(char* inPacket)
 	return outPacket;
 }
 
+void SerializeBulletCreateDataPacket(const BulletCreationDataPack& inPacket, char* outPacket)
+{
+	//set packet type
+	outPacket[0] = (char)inPacket.packetType;
+
+	char tempChars[4];
+
+	//set position x
+	SerializeInt(inPacket.posX, tempChars);
+	outPacket[1] = tempChars[0];
+	outPacket[2] = tempChars[1];
+	outPacket[3] = tempChars[2];
+	outPacket[4] = tempChars[3];
+
+	//set position y
+	SerializeInt(inPacket.posY, tempChars);
+	outPacket[5] = tempChars[0];
+	outPacket[6] = tempChars[1];
+	outPacket[7] = tempChars[2];
+	outPacket[8] = tempChars[3];
+
+	//set direction
+	outPacket[9] = inPacket.shouldTravelRight;
+}
+
+BulletCreationDataPack DeserializeBulletCreateDataPacket(char* inPacket)
+{
+	BulletCreationDataPack outPacket;
+
+	//set packet type
+	outPacket.packetType = (PacketType)inPacket[0];
+
+	//set positiion
+	outPacket.posX = DeserializeInt(inPacket, 1);
+	outPacket.posY = DeserializeInt(inPacket, 5);
+
+	outPacket.shouldTravelRight = inPacket[9];
+
+	return outPacket;
+}
+
 void SerializeBulletDataPacket(const BulletDataPack& inPacket, char* outPacket)
 {
 	//set packet type
@@ -823,6 +864,8 @@ void UpdateServer()
 		char* message = (char*)pIncomingMsg->m_pData;
 		if (message != nullptr)
 		{
+			Vector2 thisBulletPos;
+
 			//get the type
 			PacketType packetType = (PacketType)message[0];
 
@@ -845,6 +888,11 @@ void UpdateServer()
 				shouldUpdateNicknames = true;
 				break;
 			case SEND_NICKNAMES_TO_CLIENT:
+				break;
+			case REQUEST_BULLET_SPAWN:
+				BulletCreationDataPack incomingRequestBulletPacket = DeserializeBulletCreateDataPacket(message);
+				thisBulletPos = { static_cast<float>(incomingRequestBulletPacket.posX), static_cast<float>(incomingRequestBulletPacket.posY) };
+				CreateBullet(thisBulletPos, incomingRequestBulletPacket.shouldTravelRight);
 				break;
 			default:
 				break;
@@ -1235,7 +1283,17 @@ int IsServer()
 	return false;
 }
 
-void CreateBulletOnServer(int posX, int posY, bool inShouldTravelRight)
+void CreateBulletOnServer(int posX, int posY, char inShouldTravelRight)
 {
-	
+	BulletCreationDataPack myBulletPacket;
+	myBulletPacket.packetType = REQUEST_BULLET_SPAWN;
+	myBulletPacket.posX = posX;
+	myBulletPacket.posY = posY;
+	myBulletPacket.shouldTravelRight = inShouldTravelRight;
+
+	char serialPacket[BULLET_CREATION_PACKET_SIZE];
+	SerializeBulletCreateDataPacket(myBulletPacket, serialPacket);
+
+	m_pInterface->SendMessageToConnection(m_hConnection, serialPacket,
+		BULLET_CREATION_PACKET_SIZE, k_nSteamNetworkingSend_Reliable, nullptr);
 }
