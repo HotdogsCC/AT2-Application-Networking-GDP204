@@ -43,7 +43,6 @@
 #define ID_PACKET_SIZE sizeof(IDDataPacket)
 #define NICKNAME_PACKET_SIZE sizeof(NicknameDataPacket)
 #define BULLET_CREATION_PACKET_SIZE sizeof(BulletCreationDataPacket)
-#define BULLET_PACKET_SIZE sizeof(BulletDataPacket)
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -233,48 +232,6 @@ BulletCreationDataPacket DeserializeBulletCreateDataPacket(char* inPacket)
 	outPacket.posY = DeserializeInt(inPacket, 5);
 
 	outPacket.shouldTravelRight = inPacket[9];
-
-	return outPacket;
-}
-
-void SerializeBulletDataPacket(const BulletDataPacket& inPacket, char* outPacket)
-{
-	//set packet type
-	outPacket[0] = (char)inPacket.packetType;
-
-	//set ID
-	outPacket[1] = inPacket.id;
-
-	char tempChars[4];
-
-	//set position x
-	SerializeInt(inPacket.posX, tempChars);
-	outPacket[2] = tempChars[0];
-	outPacket[3] = tempChars[1];
-	outPacket[4] = tempChars[2];
-	outPacket[5] = tempChars[3];
-
-	//set position y
-	SerializeInt(inPacket.posY, tempChars);
-	outPacket[6] = tempChars[0];
-	outPacket[7] = tempChars[1];
-	outPacket[8] = tempChars[2];
-	outPacket[9] = tempChars[3];
-}
-
-BulletDataPacket DeserializeBulletDataPacket(char* inPacket)
-{
-	BulletDataPacket outPacket;
-
-	//set packet type
-	outPacket.packetType = (PacketType)inPacket[0];
-
-	//set ID
-	outPacket.id = inPacket[1];
-
-	//set positiion
-	outPacket.posX = DeserializeInt(inPacket, 2);
-	outPacket.posY = DeserializeInt(inPacket, 6);
 
 	return outPacket;
 }
@@ -962,19 +919,19 @@ void UpdateServer()
 	{
 		if (BulletIsValid(i))
 		{
-			BulletDataPacket curBulletPacket;
+			PositionDataPacket curBulletPacket;
 			curBulletPacket.packetType = BULLET_LOCATION;
 			curBulletPacket.id = i;
 			Vector2 bulPos = GetBulletPosition(i);
 			curBulletPacket.posX = static_cast<int>(bulPos.x);
 			curBulletPacket.posY = static_cast<int>(bulPos.y);
 
-			char serialBulletPacket[BULLET_PACKET_SIZE];
-			SerializeBulletDataPacket(curBulletPacket, serialBulletPacket);
+			char serialBulletPacket[POSITION_PACKET_SIZE];
+			SerializePositionDataPacket(curBulletPacket, serialBulletPacket);
 
 			for (auto client : m_Clients)
 			{
-				m_pInterface->SendMessageToConnection(client, serialBulletPacket, BULLET_PACKET_SIZE,
+				m_pInterface->SendMessageToConnection(client, serialBulletPacket, POSITION_PACKET_SIZE,
 					k_nSteamNetworkingSend_Unreliable, nullptr);
 			}
 
@@ -1064,7 +1021,7 @@ void UpdateClient()
 				}
 				break;
 			case BULLET_LOCATION:
-				BulletDataPacket incomingBullet = DeserializeBulletDataPacket(message);
+				PositionDataPacket incomingBullet = DeserializePositionDataPacket(message);
 				AddBulletToArray(incomingBullet.id, incomingBullet.posX, incomingBullet.posY);
 				break;
 			case BULLET_DESTROYED:
