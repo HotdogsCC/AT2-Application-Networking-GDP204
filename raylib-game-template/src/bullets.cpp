@@ -2,6 +2,8 @@
 #include "networking.h"
 #include "vector"
 
+
+
 class Bullet
 {
 public:
@@ -122,12 +124,50 @@ void UpdateBullets(float deltaTime)
 			if (bullets[i]->shouldTravelRight) bullets[i]->position.x += bulletSpeed * deltaTime;
 			else bullets[i]->position.x -= bulletSpeed * deltaTime;
 
+
 			//kill the bullet if it goes out of bounds
-			if (bullets[i]->position.x <= 0 || bullets[i]->position.x >= GetScreenWidth() - bulletWidth)
+			if (bullets[i]->position.x <= 0 || bullets[i]->position.x >= GetScreenWidth() - bulletWidth) 
 			{
 				bulletsToBeKilled[i] = true;
 				delete bullets[i];
 				bullets[i] = nullptr;
+			}
+
+			//check for player collisions
+			else
+			{
+				//check if we are colliding with any players
+				for (char j = 0; j < 16; j++)
+				{
+					Vector2Int itClientPos = GetClientPosition(j);
+
+					//ignore if it isnt valid
+					if (Vector2Int_IsValid(itClientPos))
+					{
+						Rectangle bulletRect;
+						bulletRect.x = bullets[i]->position.x;
+						bulletRect.y = bullets[i]->position.y;
+						bulletRect.width = bulletWidth;
+						bulletRect.height = bulletHeight;
+
+						Rectangle playerRect;
+						playerRect.x = itClientPos.x;
+						playerRect.y = itClientPos.y;
+						playerRect.width = PLAYER_CHARACTER_SIZE;
+						playerRect.height = PLAYER_CHARACTER_SIZE;
+
+						//are we colliding?
+						if (CheckCollisionRecs(bulletRect, playerRect))
+						{
+							bulletsToBeKilled[i] = true;
+							delete bullets[i];
+							bullets[i] = nullptr;
+
+							break;
+						}
+
+					}
+				}
 			}
 			
 		}

@@ -2,6 +2,7 @@
 
 #include "raylib.h"
 #define BULLET_POOL_SIZE 64
+#define PLAYER_CHARACTER_SIZE 20
 
 #ifdef __cplusplus
 extern "C" {

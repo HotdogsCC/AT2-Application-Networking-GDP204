@@ -36,7 +36,7 @@ static int framesCounter = 0;
 static int finishScreen = 0;
 
 //player
-int playerSize = 20;
+
 Vector2 position = { 0, 0 };
 Vector2 velocity = { 0, 0 };
 int moveSpeed = 400;
@@ -74,12 +74,15 @@ void UpdateGameplayScreen(void)
     {
         if (IsKeyDown(KEY_LEFT))
         {
-            CreateBullet(position, false);
+            Vector2 spawnPos;
+            spawnPos.x = position.x - PLAYER_CHARACTER_SIZE;
+            spawnPos.y = position.y;
+            CreateBullet(spawnPos, false);
         }
         else
         {
             Vector2 spawnPos;
-            spawnPos.x = position.x + playerSize;
+            spawnPos.x = position.x + PLAYER_CHARACTER_SIZE;
             spawnPos.y = position.y;
             CreateBullet(spawnPos, true);
         }
@@ -104,10 +107,10 @@ void UpdateGameplayScreen(void)
     position.y += velocity.y;
 
     //ground logic
-    if (position.y >= GetScreenHeight() - playerSize)
+    if (position.y >= GetScreenHeight() - PLAYER_CHARACTER_SIZE)
     {
         velocity.y = 0.0f;
-        position.y = GetScreenHeight() - playerSize;
+        position.y = GetScreenHeight() - PLAYER_CHARACTER_SIZE;
     }
     else
     {
@@ -124,7 +127,7 @@ void UpdateGameplayScreen(void)
 
     //confine player within the width of the screen
     if (position.x <= 0) position.x = 0;
-    if (position.x >= GetScreenWidth() - playerSize) position.x = GetScreenWidth() - playerSize;
+    if (position.x >= GetScreenWidth() - PLAYER_CHARACTER_SIZE) position.x = GetScreenWidth() - PLAYER_CHARACTER_SIZE;
 
     //send our position to the server
     UpdatePacketPosition(position.x, position.y);
@@ -159,7 +162,7 @@ void DrawGameplayScreen(void)
         if (Vector2Int_IsValid(itClientPos) && i != GetMyID())
         {
             //draw player box
-            DrawRectangle(itClientPos.x, itClientPos.y, playerSize, playerSize, GREEN);
+            DrawRectangle(itClientPos.x, itClientPos.y, PLAYER_CHARACTER_SIZE, PLAYER_CHARACTER_SIZE, GREEN);
 
             //draw player name
             const char* clientNick = GetClientNickname(i);
@@ -174,7 +177,7 @@ void DrawGameplayScreen(void)
     }
 
     //draw this player
-    DrawRectangle(position.x, position.y, playerSize, playerSize, RED);
+    DrawRectangle(position.x, position.y, PLAYER_CHARACTER_SIZE, PLAYER_CHARACTER_SIZE, RED);
     DrawText(GetNickname(), position.x, position.y - 20, 20, WHITE);
 
     
