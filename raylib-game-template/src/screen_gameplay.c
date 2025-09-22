@@ -50,6 +50,12 @@ Sound splat = { 0 };
 // Gameplay Screen Functions Definition
 //----------------------------------------------------------------------------------
 
+void ResetMyPlayerPosition()
+{
+    position.x = GetScreenWidth() / 2;
+    position.y = 20;
+}
+
 // Gameplay Screen Initialization logic
 void InitGameplayScreen(void)
 {

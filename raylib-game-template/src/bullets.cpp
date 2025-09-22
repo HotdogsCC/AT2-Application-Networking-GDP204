@@ -191,6 +191,12 @@ void UpdateBullets(float deltaTime)
 							bullets[i] = nullptr;
 
 							PlaySound(splat);
+							
+							//cue a move
+							if (IsServer())
+							{
+								ResetClientPosition(j);
+							}
 
 							//move on to the next bullet
 							break;

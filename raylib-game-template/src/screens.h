@@ -61,6 +61,8 @@ void DrawGameplayScreen(void);
 void UnloadGameplayScreen(void);
 int FinishGameplayScreen(void);
 
+void ResetMyPlayerPosition();
+
 #ifdef __cplusplus
 }
 #endif

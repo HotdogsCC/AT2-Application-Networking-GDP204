@@ -39,6 +39,7 @@
 
 #include "bullets.h"
 #include "networking.h"
+#include "screens.h"
 
 //the sizes of data packets
 #define POSITION_PACKET_SIZE sizeof(PositionDataPacket)
@@ -1003,6 +1004,13 @@ void UpdateClient()
 				IDDataPacket incomingDestBullet = DeserializeIDDataPacket(message);
 				RemoveBulletFromArray(incomingDestBullet.id);
 				break;
+			case SET_POSITION:
+				IDDataPacket incomingSetPosPacket = DeserializeIDDataPacket(message);
+				if (GetMyID() == incomingSetPosPacket.id)
+				{
+					ResetMyPlayerPosition();
+				}
+				break;
 			case PLAYER_DISCONNECTED:
 				IDDataPacket incomingPacket = DeserializeIDDataPacket(message);
 				clientPositions[incomingPacket.id] = { 0, 0 };
@@ -1134,6 +1142,45 @@ Vector2Int GetClientPosition(int clientID)
 	}
 
 	return clientPositions[clientID];
+}
+
+void ResetClientPosition(int clientID)
+{
+	//make sure client id is valid
+	if (clientID > GetClientCount())
+	{
+		return;
+	}
+
+	//make sure we are the server
+	if (!IsServer())
+	{
+		return;
+	}
+
+	//are we resting our posiiton?
+	if (clientID == GetMyID())
+	{
+		ResetMyPlayerPosition();
+		return;
+	}
+
+	//build the packet
+	IDDataPacket myResetPacket;
+	myResetPacket.packetType = SET_POSITION;
+	myResetPacket.id = clientID;
+
+	//serialise it
+	char serializedResetPacket[ID_PACKET_SIZE];
+	SerializeIDDataPacket(myResetPacket, serializedResetPacket);
+
+	//send it off to the clients
+	for (auto client : m_Clients)
+	{
+		m_pInterface->SendMessageToConnection(client, serializedResetPacket, ID_PACKET_SIZE,
+			k_nSteamNetworkingSend_Reliable, nullptr);
+	}
+	
 }
 
 enum NetworkStatus GetNetworkStatus()

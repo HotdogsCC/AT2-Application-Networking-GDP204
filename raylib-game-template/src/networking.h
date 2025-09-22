@@ -33,6 +33,7 @@ enum PacketType {
 	REQUEST_BULLET_SPAWN,
 	BULLET_LOCATION,
 	BULLET_DESTROYED,
+	SET_POSITION,
 	PLAYER_DISCONNECTED
 
 };
@@ -92,6 +93,9 @@ typedef struct BulletCreationDataPacket
 
 	//returns the client position given an ID
 	Vector2Int GetClientPosition(int clientID);
+
+	//sets the position of a player on the server, sent to cliuents
+	void ResetClientPosition(int clientID);
 
 	//returns the network status of this session
 	enum NetworkStatus GetNetworkStatus();
